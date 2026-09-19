@@ -152,3 +152,40 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
 });
+
+test('settings tab renders and mask-balance toggle works', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Your preferences, your way.' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Mask account balance' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await page.getByRole('switch', { name: 'Mask account balance' }).click();
+  await expect(page.getByRole('switch', { name: 'Mask account balance' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await expect(page.getByTestId('balance')).toHaveText('••••••');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('switch', { name: 'Mask account balance' }).click();
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+});
+
+test('settings persists across reload', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByRole('switch', { name: 'Payment confirmations' }).click();
+  await expect(page.getByRole('switch', { name: 'Payment confirmations' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('switch', { name: 'Payment confirmations' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+});

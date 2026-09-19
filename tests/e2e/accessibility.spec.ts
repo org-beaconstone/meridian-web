@@ -5,7 +5,7 @@ for (const width of [1440, 390])
   test(`core pages at ${width}px have no detected WCAG AA violations`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('/');
-    for (const name of ['Overview', 'Payments', 'Budgets', 'Activity']) {
+    for (const name of ['Overview', 'Payments', 'Budgets', 'Activity', 'Settings']) {
       await page.getByRole('button', { name, exact: true }).click();
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       const result = await new AxeBuilder({ page })
