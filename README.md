@@ -2,6 +2,10 @@
 
 A customer-facing banking and payments demo, built with React, TypeScript and **Atlassian Design System (Atlaskit)**. Meridian Bank, its customers, teams and transactions are fictional.
 
+**Rehearsal URL:** https://meridian-money.kaizen.shared.atlassian-3p.com/ (Kaizen corporate-access restrictions apply).
+
+**Repository:** https://github.com/org-beaconstone/meridian-web
+
 ![Meridian Money overview](docs/images/overview-desktop.png)
 
 ## Run it
@@ -56,7 +60,7 @@ npm run test:e2e
 TEST_PRODUCTION=1 npm run test:e2e
 ```
 
-GitHub Actions runs static checks, unit tests and production browser tests. Build output is `dist/`, with relative asset URLs for a static host. No live deployment is configured.
+GitHub Actions runs static checks, unit tests and production browser tests. Build output is `dist/`, with relative asset URLs for a static host. Kaizen hosting is configured in `kaizen.toml`; see [deployment instructions](docs/deployment.md). GitHub CI verifies the app but does not auto-deploy.
 
 ## Context for the planner
 

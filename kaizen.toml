@@ -1,0 +1,28 @@
+# Meridian Money is a static Vite app. Publish generated assets only.
+buildCommand = "npm run build"
+devCommand = "npm run dev"
+defaultTarget = "preview"
+outputDirectory = "dist"
+aliases = ["meridian-money.kaizen.shared.atlassian-3p.com"]
+customDomains = []
+projectId = "prj_f174c7aa64cf4bdc8287a6ac559267cf"
+
+[toolchain]
+cliVersion = "0.1.1530"
+
+[security.csp]
+connectSrc = ["'self'"]
+scriptSrc = ["'self'"]
+styleSrc = ["'self'", "'unsafe-inline'"]
+imgSrc = ["'self'", "data:"]
+fontSrc = ["'self'"]
+mediaSrc = ["'self'"]
+
+[security.xFrameOptions]
+mode = "deny"
+
+[security.crossOriginResourcePolicy]
+mode = "sameOrigin"
+
+[security.cors]
+mode = "disabled"

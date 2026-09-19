@@ -5,5 +5,6 @@ export default defineConfig({
   resolve: { dedupe: ['react', 'react-dom'] },
   base: './',
   server: { port: 5175 },
-  build: { outDir: 'dist', sourcemap: false },
+  // Keep fonts as same-origin files so the hosted CSP can remain font-src 'self'.
+  build: { outDir: 'dist', sourcemap: false, assetsInlineLimit: 0 },
 });

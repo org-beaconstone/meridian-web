@@ -13,9 +13,14 @@ async function controls(page: Page, scenario: string) {
 test('overview renders cleanly and payment persists exactly once', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('requestfailed', (request) => errors.push(`Failed request: ${request.url()}`));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Your everyday, balanced.' })).toBeVisible();
   await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+  await page.evaluate(() => document.fonts.ready);
   await startPayment(page);
   await page.getByLabel('Reference (optional)').fill('Friday essentials');
   await page.getByRole('button', { name: 'Review payment' }).click();

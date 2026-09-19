@@ -24,6 +24,12 @@ Unit regressions include unsafe amounts, real-calendar dates, changed payloads o
 - [Mobile overview](images/overview-mobile.png)
 - [Mobile payment screen](images/payment-mobile.png)
 
+## Hosted rehearsal verification
+
+The same 10-test browser suite also passed against https://meridian-money.kaizen.shared.atlassian-3p.com/ after deployment on 18 September 2026 (local time). This includes desktop/mobile automated accessibility scans and the payment lifecycle under the hosted CSP. The named host returns HTTP 200 and routes to deployment `kzd_cc9e1f0b1dce491eba873f1399c4c473`. Hosted verification found blocked inlined font subsets on the first deployment; emitting all assets as files resolved this without changing the CSP. Browser checks now also assert no console errors or failed requests.
+
+The project retains its inherited enforced `corp-edge` restriction. These tests ran from an allowed environment; they do not establish public internet availability. See [deployment notes](deployment.md).
+
 ## Known limits
 
-Provider outcomes are synchronous local simulations. No real API, auth, SCA or payment processing was tested. Browser storage is single-tab demo state, not a shared ledger. npm reports old React peer ranges in some transitive Atlaskit analytics packages; installed versions pass both tested modes. Vite warns that the main bundle exceeds 500 kB uncompressed; code splitting is a future production optimization, not a functional blocker. No deployment is configured.
+Provider outcomes are synchronous local simulations. No real API, auth, SCA or payment processing was tested. Browser storage is single-tab demo state, not a shared ledger. npm reports old React peer ranges in some transitive Atlaskit analytics packages; installed versions pass both tested modes. Vite warns that the main bundle exceeds 500 kB uncompressed; code splitting is a future production optimization, not a functional blocker. Manual Kaizen deployment is configured; GitHub CI is verification-only, not continuous deployment.

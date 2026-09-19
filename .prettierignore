@@ -1,5 +1,7 @@
 node_modules
 dist
+.kaizen
+tmp_rovo_*
 package-lock.json
 playwright-report
 test-results

@@ -11,7 +11,7 @@ TEST_PRODUCTION=1 npm run test:e2e
 npm run dev
 ```
 
-Open http://127.0.0.1:5175. Use **Demo controls > Reset demo data > Reset everything** for the original state. Fonts are bundled locally; no external data is needed.
+For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p.com/ from an environment allowed by Kaizen's corporate-access policy. Locally, open http://127.0.0.1:5175. Use **Demo controls > Reset demo data > Reset everything** for the original state. Fonts are bundled locally; no external data is needed.
 
 ## Three-minute baseline
 
