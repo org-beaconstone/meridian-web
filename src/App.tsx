@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
+  Bell,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   LayoutDashboard,
   Leaf,
   LockKeyhole,
+  Monitor,
   PieChart,
   Plus,
   ReceiptText,
@@ -46,7 +48,7 @@ import {
 } from './domain/model';
 import { loadState, saveState } from './domain/storage';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Settings';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -59,7 +61,29 @@ const nav = [
   { name: 'Payments', icon: ArrowUpRight },
   { name: 'Budgets', icon: PieChart },
   { name: 'Activity', icon: ReceiptText },
+  { name: 'Settings', icon: Settings2 },
 ] as const;
+
+const SETTINGS_KEY = 'meridian_settings';
+type AppSettings = {
+  maskBalance: boolean;
+  notifyPayments: boolean;
+  notifyBudgets: boolean;
+};
+const defaultSettings: AppSettings = {
+  maskBalance: false,
+  notifyPayments: true,
+  notifyBudgets: true,
+};
+function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return defaultSettings;
+    return { ...defaultSettings, ...JSON.parse(raw) };
+  } catch {
+    return defaultSettings;
+  }
+}
 const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -154,6 +178,7 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -236,6 +261,16 @@ export default function App() {
     setDialog(null);
     setPage('Overview');
     setNotice('Demo reset. You’re ready for a fresh run.');
+  }
+
+  function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
+    const next = { ...settings, [key]: value };
+    setSettings(next);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore if storage unavailable */
+    }
   }
 
   function budgetLine(budget: Budget, compact = false) {
@@ -397,7 +432,9 @@ export default function App() {
                     ? 'A little closer. One payment away.'
                     : page === 'Budgets'
                       ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                      : page === 'Settings'
+                        ? 'Your preferences, your way.'
+                        : 'The story of your spending.'}
               </h1>
               <p>
                 {page === 'Overview'
@@ -406,10 +443,12 @@ export default function App() {
                     ? 'Pay with confidence. Keep your plans in view.'
                     : page === 'Budgets'
                       ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
+                      : page === 'Settings'
+                        ? 'Tailor Meridian to the way you work.'
+                        : 'Every payment, in one clear picture.'}
               </p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'Settings' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -435,7 +474,7 @@ export default function App() {
                   <div className="balance-copy">
                     <div id="balance-title">Available balance</div>
                     <div className="balance-value" data-testid="balance">
-                      {money(state.balance)}
+                      {settings.maskBalance ? '••••••' : money(state.balance)}
                     </div>
                     <span className="balance-subtitle">
                       <span className="gold-dot" />A little peace of mind, every day.
@@ -925,6 +964,119 @@ export default function App() {
               </div>
               <Transactions transactions={filtered} onSelect={setReceipt} />
             </section>
+          )}
+
+          {page === 'Settings' && (
+            <div className="settings-grid">
+              <section className="panel settings-section" aria-labelledby="display-heading">
+                <div className="settings-section-header">
+                  <span className="icon-tile">
+                    <Monitor size={18} />
+                  </span>
+                  <div>
+                    <h2 id="display-heading">Display</h2>
+                    <p>Control how your account information is presented.</p>
+                  </div>
+                </div>
+                <div className="settings-rows">
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <strong>Mask account balance</strong>
+                      <span>Hide your balance on the Overview screen. Useful when sharing your screen.</span>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={settings.maskBalance}
+                      className={`toggle ${settings.maskBalance ? 'on' : ''}`}
+                      onClick={() => updateSetting('maskBalance', !settings.maskBalance)}
+                      aria-label="Mask account balance"
+                    >
+                      <span className="toggle-thumb" />
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <section className="panel settings-section" aria-labelledby="notifications-heading">
+                <div className="settings-section-header">
+                  <span className="icon-tile">
+                    <Bell size={18} />
+                  </span>
+                  <div>
+                    <h2 id="notifications-heading">Notifications</h2>
+                    <p>Choose which demo alerts you'd like to see.</p>
+                  </div>
+                </div>
+                <div className="settings-rows">
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <strong>Payment confirmations</strong>
+                      <span>Show a confirmation notice after each simulated payment.</span>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={settings.notifyPayments}
+                      className={`toggle ${settings.notifyPayments ? 'on' : ''}`}
+                      onClick={() => updateSetting('notifyPayments', !settings.notifyPayments)}
+                      aria-label="Payment confirmations"
+                    >
+                      <span className="toggle-thumb" />
+                    </button>
+                  </div>
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <strong>Budget alerts</strong>
+                      <span>Highlight categories where spending is close to or over your plan.</span>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={settings.notifyBudgets}
+                      className={`toggle ${settings.notifyBudgets ? 'on' : ''}`}
+                      onClick={() => updateSetting('notifyBudgets', !settings.notifyBudgets)}
+                      aria-label="Budget alerts"
+                    >
+                      <span className="toggle-thumb" />
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <section className="panel settings-section settings-about" aria-labelledby="about-heading">
+                <div className="settings-section-header">
+                  <span className="icon-tile">
+                    <ShieldCheck size={18} />
+                  </span>
+                  <div>
+                    <h2 id="about-heading">About this demo</h2>
+                    <p>Everything here is fictional — no real money, no real data.</p>
+                  </div>
+                </div>
+                <dl className="detail-list">
+                  <div>
+                    <dt>Account holder</dt>
+                    <dd>Alex Morgan (fictional)</dd>
+                  </div>
+                  <div>
+                    <dt>Currency</dt>
+                    <dd>British pound (GBP)</dd>
+                  </div>
+                  <div>
+                    <dt>Payment providers</dt>
+                    <dd>Adyen · Worldpay (simulated)</dd>
+                  </div>
+                  <div>
+                    <dt>Demo date</dt>
+                    <dd>18 September 2026</dd>
+                  </div>
+                </dl>
+                <SectionMessage title="Demonstration only">
+                  <p>
+                    Settings are stored in your browser and apply to this session only. No real
+                    financial data is held or transmitted.
+                  </p>
+                </SectionMessage>
+              </section>
+            </div>
           )}
           <footer className="page-footer">
             <span>
