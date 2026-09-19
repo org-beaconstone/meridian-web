@@ -1,22 +1,13 @@
-# Meridian planning context
+# Meridian workspace context
 
-**Meridian Money** is a working React/TypeScript/ADS banking demo. No login, no backend, GBP only. The fixed rehearsal date is 18 September 2026; Alex Morgan is fictional.
+The existing [Confluence and Google documents](https://github.com/org-beaconstone/meridian-api/blob/main/docs/context.md) are authoritative story context. Four Confluence pages were read; two Google working docs are linked but their content could not be fetched with current access. No duplicate external documents were created.
 
-## Run and review
+- [Connected workspace](workspace-map.md): three real repositories and documented team/Jira context.
+- [Company strategy](company-strategy.md): source summary with FY25 volume baseline.
+- [Provider expansion](provider-expansion-playbook.md): canonical scorecard and rollout gates.
+- [Compliance policy](compliance-policy.md): fictional procurement gates and actual implementation boundaries.
+- [API standards](api-standards.md): target policy versus implemented Java rehearsal controls.
+- [Brand / ADS](brand-design-system.md): navy/gold identity, existing components and accessibility.
+- [Standalone rehearsal](demo-runbook.md), [connected mode](../INTEGRATION.md), [Kaizen hosting](deployment.md).
 
-- [Demo runbook](demo-runbook.md): customer flow, alternate outcomes and safe reset.
-- [Brand and design system](brand-design-system.md): installed ADS components, custom brand surfaces, responsive and accessibility notes.
-- [Workspace map](workspace-map.md): fictional teams, illustrative Jira keys and actual versus contextual repositories.
-
-## Linked company seeds
-
-- [Company strategy FY26-28](company-strategy.md): New York HQ, 4M UK/US customers, Europe expansion and a 3x payment-volume ambition.
-- [Provider expansion playbook](provider-expansion-playbook.md): weighted evaluation, no-go checks and sandbox/pilot/full rollout.
-- [Payments compliance policy](compliance-policy.md): proposed PCI-DSS, PSD2/SCA, residency, KYC/AML and SOC 2 Type II constraints.
-- [API integration standards](api-standards.md): auth, provider ports, idempotency, safe retries, webhooks and circuit breakers.
-
-All company metrics, owners, milestones and records are synthetic story context, not real commitments or compliance evidence. No Confluence publication or Jira creation has occurred.
-
-## Implemented baseline
-
-Overview, editable budgets, searchable activity, and a saved-recipient payment flow with review and receipt. State persists in this browser. Two provider simulations: card via Adyen, bank payment via Worldpay, with success, decline and unavailable scenarios. Masked fictional account/card labels are used; there are no actual saved provider tokens or SDK requests. A third provider is deliberately absent and unnamed.
+Current provider baseline remains Adyen and Worldpay only. The next European integration is deliberately absent. Native configuration remains hardcoded to those two providers.

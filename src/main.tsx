@@ -5,6 +5,7 @@ import { setGlobalTheme } from '@atlaskit/tokens/set-global-theme';
 import '@atlaskit/css-reset';
 import App from './App';
 import './styles.css';
+import './connection.css';
 
 setBooleanFeatureFlagResolver(() => false);
 async function start() {

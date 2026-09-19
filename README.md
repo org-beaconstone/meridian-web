@@ -16,7 +16,7 @@ npm run dev
 # http://127.0.0.1:5175
 ```
 
-Node 22.12+ is required. No API keys, backend or login needed.
+Node 22.12+ is required. The default standalone mode needs no API keys, backend or login. For the real Java-backed, shared web/mobile rehearsal, see [connected mode](INTEGRATION.md) and run `node scripts/rehearsal.mjs` from the sibling `meridian-api` checkout.
 
 ## Interactive features
 
@@ -64,4 +64,4 @@ GitHub Actions runs static checks, unit tests and production browser tests. Buil
 
 ## Context for the planner
 
-Start with [the documentation index](docs/README.md) and [demo runbook](docs/demo-runbook.md). Company strategy, provider evaluation, compliance policies, integration standards, brand guidance and illustrative team/Jira context are included as linked Markdown seeds. They have **not** been published to Confluence or Jira. `meridian-api` (Java/Spring Boot) and `meridian-mobile` (Swift/Kotlin) are contextual target repositories, not additional applications built here.
+Start with [the documentation index](docs/README.md) and [demo runbook](docs/demo-runbook.md). The existing Confluence and Google documents are linked from [workspace map](docs/workspace-map.md), with no duplicate publication. [meridian-api](https://github.com/org-beaconstone/meridian-api) is now the working Java/Spring Boot rehearsal backend. [meridian-mobile](https://github.com/org-beaconstone/meridian-mobile) contains Swift/Kotlin clients, native UI source and a browser companion. They share one server ledger in connected mode. The Kaizen URL remains standalone; it does not imply a hosted Java API.

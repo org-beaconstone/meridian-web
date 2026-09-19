@@ -1,37 +1,17 @@
-# Meridian workspace map
+# Connected Meridian workspace
 
-All teams, people and Jira keys below are fictional planning context. No Jira records or Confluence pages have been created. Repository status is explicitly separated from the proposed workspace.
+## Code repositories
 
-## Team ownership
+- [meridian-web](https://github.com/org-beaconstone/meridian-web): existing ADS React/TypeScript banking experience. Standalone mode preserved; connected mode calls the Java API.
+- [meridian-api](https://github.com/org-beaconstone/meridian-api): Java21/Spring Boot, H2 rehearsal ledger, provider port and Adyen/Worldpay simulations, signed synthetic webhooks, idempotency and audit events.
+- [meridian-mobile](https://github.com/org-beaconstone/meridian-mobile): shared-contract Swift/Kotlin SDKs, native SwiftUI and Compose sources, plus explicitly labelled mobile browser companion.
 
-| Team               | Fictional lead | Responsibilities                                      | Jira key  |
-| ------------------ | -------------- | ----------------------------------------------------- | --------- |
-| Payments Platform  | Priya Shah     | Provider adapters, routing, ledger and reconciliation | PAY, MAPI |
-| Trust & Safety     | Daniel Brooks  | Vendor diligence, fraud, SCA, PCI and residency gates | PAY, MAPI |
-| Growth Engineering | Elena Ruiz     | Web payment experience, budgets and activation        | MWEB      |
-| Mobile Experience  | Tom Okafor     | Native payment UI and shared payment SDK contracts    | MMOB      |
+All three exist as private repositories in org-beaconstone. No actual provider SDK, credentials or production financial data is included. See [connected mode](../INTEGRATION.md).
 
-## Repository context
+## Existing company context
 
-| Repository      | Stack                        | Context and actual status                                                                                                                           |
-| --------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| meridian-web    | React, TypeScript, ADS, Vite | This working customer web demo. Two provider simulations, local state, no production connectivity.                                                  |
-| meridian-api    | Java, Spring Boot            | Contextual target, not created. Proposed orchestrator with pluggable Adyen/Worldpay adapters, routing and webhooks.                                 |
-| meridian-mobile | Swift and Kotlin             | Contextual target, not created. Proposed native surfaces and shared payment SDK contract; baseline configuration limited to the same two providers. |
+The user supplied four Confluence pages and two Google working documents. They are not newly created by this implementation. [Canonical links and verified context](https://github.com/org-beaconstone/meridian-api/blob/main/docs/context.md).
 
-The API and mobile baseline descriptions are story context for planning, not proof that repositories or SDKs exist. Do not point a planner at invented source URLs.
+Payments Platform owns provider engineering; Trust & Safety owns policy gates; Growth Engineering owns web conversion and checkout. PAY-1187, PAY-1204, MAPI-771, MWEB-318 and MMOB-402 appear in the source documents. Their live Jira status was not independently queried here.
 
-## Illustrative backlog
-
-These are seed titles, not issue links or created records:
-
-- PAY: Define European provider evaluation scorecard and no-go criteria.
-- MWEB: Preserve accessibility and budget context through payment-method selection.
-- MAPI: Document idempotency and unknown-outcome reconciliation contract.
-- MMOB: Replace two-provider hardcoding with reviewed shared capability configuration.
-
-## Working agreements
-
-Payments Platform owns integration readiness. Growth Engineering owns customer flow changes. Trust & Safety can stop vendor onboarding on a no-go criterion. Mobile Experience reviews contract changes before any pilot. A weekly provider readiness review references [strategy](company-strategy.md), [playbook](provider-expansion-playbook.md), [compliance](compliance-policy.md) and [integration standards](api-standards.md).
-
-Confluence-ready seeds are indexed in [README](README.md). Publish them only after choosing a real destination and replacing illustrative ownership with approved demo workspace records.
+The native two-provider configuration remains deliberately hardcoded. No future European provider is selected, named or implemented. The browser rehearsal's card/Adyen and bank/Worldpay mapping is a simple simulation, not the source story's complete production failover routing.

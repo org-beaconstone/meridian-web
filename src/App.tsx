@@ -27,26 +27,21 @@ import {
 } from 'lucide-react';
 import Dialog from './components/Dialog';
 import {
-  createInitialState,
-  DEMO_DATE,
-  executePayment,
   getProvider,
   money,
   monthlySpent,
   parseAmount,
   RECIPIENTS,
-  updateBudget,
   validatePayment,
-  type BankState,
   type Budget,
   type Category,
   type PaymentDraft,
   type Scenario,
   type Transaction,
 } from './domain/model';
-import { loadState, saveState } from './domain/storage';
+import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -137,9 +132,20 @@ function Transactions({
 }
 
 export default function App() {
-  const [initial] = useState(loadState);
-  const [state, setState] = useState<BankState>(initial.state);
-  const [warning, setWarning] = useState(initial.warning);
+  const {
+    state,
+    warning,
+    busy,
+    connectionMode,
+    connectionStatus,
+    connectionError,
+    sessionId,
+    submitPayment: apiSubmitPayment,
+    updateBudget: apiUpdateBudget,
+    reset: apiReset,
+    changeSession,
+  } = useBank();
+
   const [page, setPage] = useState<Page>('Overview');
   const [draft, setDraft] = useState<PaymentDraft>(blankDraft);
   const [step, setStep] = useState<'details' | 'review' | 'done'>('details');
@@ -147,26 +153,29 @@ export default function App() {
   const [scenario, setScenario] = useState<Scenario>('success');
   const [receipt, setReceipt] = useState<Transaction | null>(null);
   const [lastPayment, setLastPayment] = useState<Transaction | null>(null);
-  const [dialog, setDialog] = useState<'controls' | 'account' | 'reset' | null>(null);
+  const [dialog, setDialog] = useState<'controls' | 'account' | 'reset' | 'connection' | null>(
+    null,
+  );
   const [budgetEdit, setBudgetEdit] = useState<Budget | null>(null);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetError, setBudgetError] = useState('');
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sessionInput, setSessionInput] = useState(sessionId);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const mounted = useRef(false);
 
   useEffect(() => {
-    if (!saveState(state))
-      setWarning('Changes are kept for this visit only. Browser storage is unavailable.');
-  }, [state]);
-  useEffect(() => {
     if (mounted.current) heading.current?.focus();
     mounted.current = true;
   }, [page, step]);
+
+  useEffect(() => {
+    setSessionInput(sessionId);
+  }, [sessionId]);
 
   const spent = monthlySpent(state);
   const budgetTotal = state.budgets.reduce((sum, budget) => sum + budget.limit, 0);
@@ -198,23 +207,21 @@ export default function App() {
     confirming.current = false;
     navigate('Payments');
   }
-  function confirmPayment() {
+  async function confirmPayment() {
     if (confirming.current) return;
     confirming.current = true;
-    const result = executePayment(
-      state,
-      draft,
-      scenario,
-      paymentId.current,
-      `${DEMO_DATE}T12:00:00Z`,
-    );
-    if (result.ok) {
-      setState(result.state);
+
+    const result = await apiSubmitPayment(draft, scenario, paymentId.current);
+
+    if (result.ok && result.transaction) {
       setLastPayment(result.transaction);
       setErrors([]);
       setStep('done');
+    } else if (result.code === 'PAYMENT_PENDING') {
+      setErrors([result.error || 'Payment pending']);
+      confirming.current = false;
     } else {
-      setErrors([result.error]);
+      setErrors([result.error || 'Payment failed']);
       confirming.current = false;
     }
   }
@@ -223,19 +230,22 @@ export default function App() {
     setBudgetAmount((budget.limit / 100).toFixed(2));
     setBudgetError('');
   }
-  function reset() {
-    setState(createInitialState());
-    setDraft(blankDraft());
-    setStep('details');
-    setScenario('success');
-    setErrors([]);
-    setLastPayment(null);
-    setWarning(null);
-    setQuery('');
-    setFilter('all');
-    setDialog(null);
-    setPage('Overview');
-    setNotice('Demo reset. You’re ready for a fresh run.');
+  async function reset() {
+    const result = await apiReset();
+    if (result.ok) {
+      setDraft(blankDraft());
+      setStep('details');
+      setScenario('success');
+      setErrors([]);
+      setLastPayment(null);
+      setQuery('');
+      setFilter('all');
+      setDialog(null);
+      setPage('Overview');
+      setNotice("Demo reset. You're ready for a fresh run.");
+    } else {
+      setNotice(`Reset failed: ${result.error || 'Unknown error'}`);
+    }
   }
 
   function budgetLine(budget: Budget, compact = false) {
@@ -380,6 +390,22 @@ export default function App() {
               <SectionMessage appearance="warning" title="Browser storage notice">
                 <p>{warning}</p>
               </SectionMessage>
+            </div>
+          )}
+          {connectionMode === 'connected' && (
+            <div className="connection-strip" role="status">
+              <strong>
+                {connectionStatus === 'connected'
+                  ? 'Connected API'
+                  : connectionStatus === 'connecting'
+                    ? 'Connecting to API'
+                    : 'API unavailable'}
+              </strong>
+              <span>Room: {sessionId}</span>
+              <Button appearance="subtle" onClick={() => setDialog('connection')}>
+                Change room
+              </Button>
+              {connectionError && <span>{connectionError}</span>}
             </div>
           )}
           <div role="status" className={notice ? 'notice' : 'sr-only'}>
@@ -586,7 +612,7 @@ export default function App() {
                     >
                       <p>
                         {errors.join('. ')}
-                        {step === 'review'
+                        {step === 'review' && connectionMode === 'standalone'
                           ? '. No money has left your account. You can go back or change the demo scenario and retry.'
                           : ''}
                       </p>
@@ -764,7 +790,14 @@ export default function App() {
                       >
                         Back to details
                       </Button>
-                      <Button appearance="primary" onClick={confirmPayment}>
+                      <Button
+                        appearance="primary"
+                        onClick={confirmPayment}
+                        isDisabled={
+                          busy ||
+                          (connectionMode === 'connected' && connectionStatus !== 'connected')
+                        }
+                      >
                         Confirm {money(amount)} payment
                       </Button>
                     </div>
@@ -979,14 +1012,18 @@ export default function App() {
       {budgetEdit && (
         <Dialog title={`Edit ${budgetEdit.category} budget`} onClose={() => setBudgetEdit(null)}>
           <form
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              const result = updateBudget(state, budgetEdit.category, budgetAmount);
+              const [pence] = parseAmount(budgetAmount);
+              if (pence === null) {
+                setBudgetError('Invalid amount');
+                return;
+              }
+              const result = await apiUpdateBudget(budgetEdit.category, pence);
               if (result.ok) {
-                setState(result.state);
                 setNotice(`${budgetEdit.category} budget updated.`);
                 setBudgetEdit(null);
-              } else setBudgetError(result.error);
+              } else setBudgetError(result.error || 'Update failed');
             }}
             noValidate
           >
@@ -1065,6 +1102,31 @@ export default function App() {
           <p className="muted">
             Fixed rehearsal date: 18 September 2026. No requests are sent to Adyen or Worldpay.
           </p>
+          {connectionMode === 'connected' && (
+            <>
+              <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid #DCDFE4' }} />
+              <Button appearance="subtle" onClick={() => setDialog('connection')}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor:
+                        connectionStatus === 'connected'
+                          ? '#4BCE97'
+                          : connectionStatus === 'error'
+                            ? '#F87154'
+                            : '#F5CD47',
+                    }}
+                  />
+                  {connectionStatus === 'connected' && 'Connected API'}
+                  {connectionStatus === 'connecting' && 'Connecting...'}
+                  {connectionStatus === 'error' && 'Connection error'}
+                </span>
+              </Button>
+            </>
+          )}
           <div className="dialog-actions">
             <Button appearance="danger" onClick={() => setDialog('reset')}>
               Reset demo data
@@ -1078,13 +1140,116 @@ export default function App() {
       {dialog === 'reset' && (
         <Dialog title="Start fresh?" onClose={() => setDialog(null)}>
           <p>
-            This resets this browser’s demo payments and budgets to the original September snapshot.
+            This resets this browser's demo payments and budgets to the original September snapshot.
           </p>
           <div className="dialog-actions">
             <Button onClick={() => setDialog(null)}>Keep my changes</Button>
             <Button appearance="danger" onClick={reset}>
               Reset everything
             </Button>
+          </div>
+        </Dialog>
+      )}
+      {connectionMode === 'connected' && dialog === 'connection' && (
+        <Dialog title="Connected API" onClose={() => setDialog(null)}>
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  backgroundColor:
+                    connectionStatus === 'connected'
+                      ? '#DFFCF0'
+                      : connectionStatus === 'error'
+                        ? '#FFECEB'
+                        : '#FFF7D6',
+                  color:
+                    connectionStatus === 'connected'
+                      ? '#216E4E'
+                      : connectionStatus === 'error'
+                        ? '#AE2A19'
+                        : '#533F04',
+                }}
+              >
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor:
+                      connectionStatus === 'connected'
+                        ? '#4BCE97'
+                        : connectionStatus === 'error'
+                          ? '#F87154'
+                          : '#F5CD47',
+                  }}
+                />
+                {connectionStatus === 'connected' && 'Connected API'}
+                {connectionStatus === 'connecting' && 'Connecting...'}
+                {connectionStatus === 'error' && 'Connection error'}
+              </span>
+            </div>
+
+            {connectionError && (
+              <div
+                style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  backgroundColor: '#FFECEB',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  color: '#AE2A19',
+                }}
+              >
+                <strong>Error:</strong> {connectionError}
+              </div>
+            )}
+
+            <label className="field-label" htmlFor="session-id">
+              Rehearsal session
+            </label>
+            <Textfield
+              id="session-id"
+              value={sessionInput}
+              onChange={(event) => setSessionInput(event.currentTarget.value)}
+              placeholder="meridian-rehearsal"
+            />
+            <p className="muted" style={{ fontSize: '13px', marginTop: '8px' }}>
+              Session ID isolates shared state between users. Default: meridian-rehearsal. Changing
+              resets draft/error state.
+            </p>
+
+            <div className="dialog-actions" style={{ marginTop: '16px' }}>
+              <Button onClick={() => setDialog(null)}>Cancel</Button>
+              <Button
+                appearance="primary"
+                onClick={async () => {
+                  try {
+                    await changeSession(sessionInput);
+                    setDraft(blankDraft());
+                    setStep('details');
+                    setErrors([]);
+                    setLastPayment(null);
+                    setReceipt(null);
+                    setBudgetEdit(null);
+                    paymentId.current = crypto.randomUUID();
+                    confirming.current = false;
+                    setNotice('');
+                    setDialog(null);
+                  } catch (error) {
+                    setNotice(error instanceof Error ? error.message : 'Room change failed');
+                  }
+                }}
+              >
+                Change session
+              </Button>
+            </div>
           </div>
         </Dialog>
       )}

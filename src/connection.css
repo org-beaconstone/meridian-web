@@ -1,0 +1,17 @@
+.connection-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid #dce4d5;
+  background: #edf3e7;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 20px;
+  color: #31482c;
+}
+.connection-strip > span:last-child {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

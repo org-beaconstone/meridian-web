@@ -31,7 +31,7 @@ const TransactionSchema = z
 const BudgetSchema = z
   .object({ category: CategorySchema, limit: MinorUnits.positive().max(1000000) })
   .strict();
-const BankStateSchema = z
+export const BankStateSchema = z
   .object({
     version: z.literal(1),
     balance: MinorUnits,
