@@ -1899,149 +1899,216 @@ strong {
 .merchant-avatar {
   color: color-mix(in srgb, var(--merchant-color, #839478) 45%, #172720);
 }
-/* ── Sticky note showcase ─────────────────────────────────────────────────── */
-@keyframes sticky-float {
-  0% {
-    transform: translateY(100%) rotate(-4deg);
-    opacity: 0;
+/* ─── Sticky Note Showcase ──────────────────────────────────────── */
+
+@keyframes sticky-flow {
+  from {
+    transform: translateX(110%) rotate(var(--note-tilt, 0deg));
   }
-  8% {
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(-40%) rotate(3deg);
-  }
-  92% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-120%) rotate(-2deg);
-    opacity: 0;
+  to {
+    transform: translateX(-200px) rotate(var(--note-tilt, 0deg));
   }
 }
+
 .sticky-note-showcase {
-  margin-top: 26px;
-  display: grid;
-  grid-template-columns: 1fr minmax(280px, 380px);
-  gap: 22px;
-  align-items: start;
-}
-.sticky-note-stage {
-  position: relative;
-  height: 320px;
+  margin-top: 28px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--brand-navy);
   overflow: hidden;
-  background: #f4f6f0;
-  border: 1px solid #e4e8de;
-  border-radius: 12px;
+  color: #e4ede7;
 }
-.sticky-note-float {
-  position: absolute;
-  bottom: -120px;
-  left: var(--note-x, 50%);
-  transform: translateX(-50%);
-  width: 120px;
-  min-height: 120px;
-  padding: 14px 12px 10px;
-  background: var(--note-colour, #ffe066);
-  border-radius: 3px;
+
+.sticky-note-showcase-header {
+  padding: 28px 30px 20px;
+  border-bottom: 1px solid #ffffff18;
+}
+
+.sticky-note-showcase-header .eyebrow {
+  color: var(--brand-gold);
+}
+
+.sticky-note-showcase-header h2 {
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-top: 6px;
+}
+
+.sticky-note-showcase-header p {
   font-size: 12px;
+  color: #b8c8c0;
+  margin-top: 6px;
+}
+
+.sticky-note-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 0;
+}
+
+/* Floating canvas */
+.sticky-note-canvas {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  background: #0e2028;
+  border-right: 1px solid #ffffff18;
+}
+
+.sticky-note-card {
+  position: absolute;
+  width: 155px;
+  min-height: 80px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  background: var(--note-bg, #fef3a7);
+  color: var(--note-fg, #5c540a);
+  font-size: 12px;
+  font-weight: 500;
   line-height: 1.5;
-  word-break: break-word;
-  box-shadow:
-    2px 2px 6px #0000001a,
-    0 1px 0 #00000010;
-  animation: sticky-float var(--note-duration, 18s) var(--note-delay, 0s) linear forwards;
-  pointer-events: none;
+  box-shadow: 2px 3px 10px #00000030, 0 1px 2px #00000020;
+  animation: sticky-flow 14s linear infinite;
+  /* vertical lane: 5 tracks across the 220 px canvas height */
+  top: calc(var(--note-lane, 0) * 38px + 12px);
+  will-change: transform, opacity;
 }
-.sticky-note-creator {
-  /* inherits .panel */
-}
-.colour-palette-group {
-  margin-bottom: 20px;
-}
-.colour-palette {
+
+/* Creation form */
+.sticky-note-form {
+  padding: 20px 22px;
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
 }
-.colour-swatch {
-  cursor: pointer;
+
+.sticky-note-preview-wrap {
   display: flex;
-  align-items: center;
   justify-content: center;
 }
-.colour-swatch input[type='radio'] {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-.swatch-dot {
-  display: block;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  transition: border-color 0.15s, transform 0.15s;
-}
-.colour-swatch:hover .swatch-dot {
-  transform: scale(1.12);
-}
-.colour-swatch.selected .swatch-dot {
-  border-color: var(--brand-navy);
-  transform: scale(1.18);
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--brand-navy);
-}
-.colour-swatch input:focus-visible ~ .swatch-dot {
-  outline: 3px solid var(--ds-border-focused, #4688fa);
-  outline-offset: 3px;
-}
+
 .sticky-note-preview {
-  background: var(--note-colour, #ffe066);
-  border-radius: 3px;
-  padding: 14px 12px;
+  width: 120px;
   min-height: 70px;
-  font-size: 13px;
-  line-height: 1.55;
-  margin: 16px 0 18px;
-  box-shadow:
-    2px 2px 5px #0000001a,
-    0 1px 0 #00000010;
-  transition: background 0.2s;
+  padding: 12px 14px;
+  border-radius: 3px;
+  background: var(--note-bg, #fef3a7);
+  color: var(--note-fg, #5c540a);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 2px 3px 8px #00000025;
   word-break: break-word;
 }
-.preview-placeholder {
-  color: #4a3d00;
-  font-style: italic;
+
+.sticky-note-palette {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
+
+.palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.palette-swatch:hover {
+  transform: scale(1.18);
+}
+
+.palette-swatch.selected {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+.sticky-note-input {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #ffffff25;
+  border-radius: var(--ds-radius-small, 4px);
+  background: #ffffff12;
+  color: #e4ede7;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.sticky-note-input::placeholder {
+  color: #7a9a8a;
+}
+
+.sticky-note-input:focus {
+  outline: 3px solid var(--ds-border-focused, #4688fa);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+
+.sticky-note-form .field-label {
+  color: #b8c8c0;
+  margin-bottom: 4px;
+}
+
 .sticky-note-error {
-  margin-top: 6px;
-  font-size: 12px;
+  font-size: 11px;
+  color: #f87171;
+  margin: 0;
 }
+
+.sticky-note-form-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 @media (max-width: 1000px) {
-  .sticky-note-showcase {
+  .sticky-note-layout {
     grid-template-columns: 1fr;
   }
-  .sticky-note-stage {
-    height: 200px;
+  .sticky-note-canvas {
+    border-right: none;
+    border-bottom: 1px solid #ffffff18;
   }
 }
+
 @media (max-width: 760px) {
-  .sticky-note-stage {
-    height: 170px;
+  .sticky-note-showcase-header {
+    padding: 20px 20px 16px;
   }
-  .sticky-note-float {
-    width: 100px;
-    min-height: 100px;
-    font-size: 11px;
+  .sticky-note-form {
+    padding: 16px 20px;
+  }
+  .sticky-note-canvas {
+    height: 180px;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-note-card {
+    animation: none;
+    position: static;
+    display: inline-block;
+    margin: 8px;
+    opacity: 1;
+  }
+  .sticky-note-canvas {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    height: auto;
+    padding: 12px;
+  }
+}
+
+/* ─── End Sticky Note Showcase ──────────────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
