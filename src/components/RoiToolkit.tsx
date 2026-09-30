@@ -44,9 +44,6 @@ export default function RoiToolkit() {
     : seats.trim() === ''
       ? parsed.errors.filter((error) => error !== 'Seats is required')
       : parsed.errors;
-  const displacementCount = CASE_STUDIES.filter(
-    (study) => study.motion === 'whiteboard-displacement',
-  ).length;
 
   function selectTab(next: RoiTab) {
     setTab(next);
@@ -342,8 +339,8 @@ export default function RoiToolkit() {
           <SectionMessage appearance="warning" title="Illustrative toolkit">
             <p>
               The Q3 Planning Offsite case studies are not in this repository. These{' '}
-              {CASE_STUDIES.length} write-ups are illustrative stand-ins. {displacementCount} of
-              them is a whiteboard displacement story. None of them is verified customer evidence.
+              {CASE_STUDIES.length} write-ups are illustrative stand-ins. One of them is a
+              whiteboard displacement story. None of them is verified customer evidence.
             </p>
           </SectionMessage>
           <div className="case-list">

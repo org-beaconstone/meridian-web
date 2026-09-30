@@ -11,8 +11,8 @@ test('whiteboard displacement calculator, notes, and case studies', async ({ pag
   ).toBeVisible();
   await expect(page.getByLabel('Price per seat (USD per month)')).toHaveValue('20.00');
 
-  await page.getByLabel('Seats').fill('120');
-  await page.getByLabel('Boards to import').fill('40');
+  await page.getByRole('textbox', { name: 'Seats', exact: true }).fill('120');
+  await page.getByRole('textbox', { name: 'Boards to import', exact: true }).fill('40');
   await expect(page.getByTestId('annual-savings')).toContainText('$27,800.00');
   await expect(page.getByText('Not a quote')).toBeVisible();
   await page.getByRole('checkbox', { name: /Discovery confirmed/ }).check();
@@ -20,8 +20,8 @@ test('whiteboard displacement calculator, notes, and case studies', async ({ pag
 
   await page.getByLabel('Competitor tool').selectOption('mural');
   await expect(page.getByLabel('Price per seat (USD per month)')).toHaveValue('17.99');
-  await page.getByLabel('Seats').fill('100');
-  await page.getByLabel('Boards to import').fill('0');
+  await page.getByRole('textbox', { name: 'Seats', exact: true }).fill('100');
+  await page.getByRole('textbox', { name: 'Boards to import', exact: true }).fill('0');
   await expect(page.getByTestId('annual-savings')).toContainText('$21,588.00');
   await expect(page.getByText('Not a quote')).toBeVisible();
 
@@ -50,6 +50,6 @@ test('ROI navigation fits a phone width', async ({ page }) => {
   expect(overflows).toBe(false);
   await page.getByRole('button', { name: 'ROI', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await page.getByLabel('Seats').fill('10');
+  await page.getByRole('textbox', { name: 'Seats', exact: true }).fill('10');
   await expect(page.getByTestId('annual-savings')).toContainText('$2,400.00');
 });
