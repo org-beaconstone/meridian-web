@@ -38,6 +38,7 @@ import {
   type WhiteboardState,
 } from './domain/whiteboard';
 import Dialog from './components/Dialog';
+import StickyBoard from './components/StickyBoard';
 import {
   getProvider,
   money,
@@ -596,6 +597,7 @@ export default function App() {
                   </section>
                 </div>
               </div>
+              <StickyBoard />
             </>
           )}
 
