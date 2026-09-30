@@ -1622,13 +1622,21 @@ strong {
     gap: 5px;
   }
   .nav-item {
-    flex: 1;
+    flex: 1 1 0;
+    flex-direction: column;
     justify-content: center;
-    padding: 12px 8px;
+    min-width: 0;
+    padding: 8px 2px;
     border-radius: 7px 7px 0 0;
-    font-size: 11px;
-    gap: 6px;
-    min-height: 43px;
+    font-size: 10px;
+    line-height: 1.15;
+    gap: 2px;
+    min-height: 52px;
+    text-align: center;
+  }
+  .nav-item span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
   .nav-item svg {
     width: 16px;
