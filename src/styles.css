@@ -1899,11 +1899,222 @@ strong {
 .merchant-avatar {
   color: color-mix(in srgb, var(--merchant-color, #839478) 45%, #172720);
 }
+/* ─── Sticky Note Showcase ──────────────────────────────────────── */
+
+@keyframes sticky-flow {
+  from {
+    transform: translateX(110%) rotate(var(--note-tilt, 0deg));
+  }
+  to {
+    transform: translateX(-200px) rotate(var(--note-tilt, 0deg));
+  }
+}
+
+.sticky-note-showcase {
+  margin-top: 28px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--brand-navy);
+  overflow: hidden;
+  color: #e4ede7;
+}
+
+.sticky-note-showcase-header {
+  padding: 28px 30px 20px;
+  border-bottom: 1px solid #ffffff18;
+}
+
+.sticky-note-showcase-header .eyebrow {
+  color: var(--brand-gold);
+}
+
+.sticky-note-showcase-header h2 {
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-top: 6px;
+}
+
+.sticky-note-showcase-header p {
+  font-size: 12px;
+  color: #b8c8c0;
+  margin-top: 6px;
+}
+
+.sticky-note-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 0;
+}
+
+/* Floating canvas */
+.sticky-note-canvas {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  background: #0e2028;
+  border-right: 1px solid #ffffff18;
+}
+
+.sticky-note-card {
+  position: absolute;
+  width: 155px;
+  min-height: 80px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  background: var(--note-bg, #fef3a7);
+  color: var(--note-fg, #5c540a);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 2px 3px 10px #00000030, 0 1px 2px #00000020;
+  animation: sticky-flow 14s linear infinite;
+  /* vertical lane: 5 tracks across the 220 px canvas height */
+  top: calc(var(--note-lane, 0) * 38px + 12px);
+  will-change: transform, opacity;
+}
+
+/* Creation form */
+.sticky-note-form {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sticky-note-preview-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.sticky-note-preview {
+  width: 120px;
+  min-height: 70px;
+  padding: 12px 14px;
+  border-radius: 3px;
+  background: var(--note-bg, #fef3a7);
+  color: var(--note-fg, #5c540a);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 2px 3px 8px #00000025;
+  word-break: break-word;
+}
+
+.sticky-note-palette {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.palette-swatch:hover {
+  transform: scale(1.18);
+}
+
+.palette-swatch.selected {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+.sticky-note-input {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #ffffff25;
+  border-radius: var(--ds-radius-small, 4px);
+  background: #ffffff12;
+  color: #e4ede7;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.sticky-note-input::placeholder {
+  color: #7a9a8a;
+}
+
+.sticky-note-input:focus {
+  outline: 3px solid var(--ds-border-focused, #4688fa);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+
+.sticky-note-form .field-label {
+  color: #b8c8c0;
+  margin-bottom: 4px;
+}
+
+.sticky-note-error {
+  font-size: 11px;
+  color: #f87171;
+  margin: 0;
+}
+
+.sticky-note-form-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1000px) {
+  .sticky-note-layout {
+    grid-template-columns: 1fr;
+  }
+  .sticky-note-canvas {
+    border-right: none;
+    border-bottom: 1px solid #ffffff18;
+  }
+}
+
+@media (max-width: 760px) {
+  .sticky-note-showcase-header {
+    padding: 20px 20px 16px;
+  }
+  .sticky-note-form {
+    padding: 16px 20px;
+  }
+  .sticky-note-canvas {
+    height: 180px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-note-card {
+    animation: none;
+    position: static;
+    display: inline-block;
+    margin: 8px;
+    opacity: 1;
+  }
+  .sticky-note-canvas {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    height: auto;
+    padding: 12px;
+  }
+}
+
+/* ─── End Sticky Note Showcase ──────────────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
     scroll-behavior: auto !important;
   }
 }

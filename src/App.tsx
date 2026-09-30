@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import StickyNoteCanvas from './components/StickyNoteCanvas';
 import {
   getProvider,
   money,
@@ -576,6 +577,7 @@ export default function App() {
                   </section>
                 </div>
               </div>
+              <StickyNoteCanvas />
             </>
           )}
 
