@@ -152,3 +152,31 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
 });
+
+test('sticky note panel is visible on overview with colour palette', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Stick a thought' })).toBeVisible();
+  await expect(page.getByLabel('Your note')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Note colour' })).toBeVisible();
+  const swatches = page.locator('.sticky-color-swatch');
+  await expect(swatches).toHaveCount(5);
+});
+
+test('adding a sticky note shows it in the notes area with the selected colour', async ({
+  page,
+}) => {
+  await page.goto('/');
+  // Scroll the sticky notes panel into view
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  // Click the Mint green colour label (the radio itself is visually hidden)
+  await page.locator('.sticky-color-option').filter({ hasText: 'Mint green' }).click();
+  await page.getByLabel('Your note').fill('Save more each month');
+  await page.getByRole('button', { name: 'Add note' }).click();
+  const notesArea = page.getByLabel('Your sticky notes');
+  await expect(notesArea).toBeVisible();
+  await expect(notesArea).toContainText('Save more each month');
+  const note = notesArea.locator('.sticky-note');
+  await expect(note).toHaveAttribute('data-color', 'mint');
+  // text input is cleared after adding
+  await expect(page.getByLabel('Your note')).toHaveValue('');
+});
