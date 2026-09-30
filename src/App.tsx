@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import StickyNoteShowcase, { type StickyNoteItem } from './components/StickyNoteShowcase';
 import {
   getProvider,
   money,
@@ -163,6 +164,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [stickyNotes, setStickyNotes] = useState<StickyNoteItem[]>([]);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -576,6 +578,10 @@ export default function App() {
                   </section>
                 </div>
               </div>
+              <StickyNoteShowcase
+                notes={stickyNotes}
+                onAdd={(note) => setStickyNotes((prev) => [...prev, note])}
+              />
             </>
           )}
 
