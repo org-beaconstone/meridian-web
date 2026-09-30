@@ -16,7 +16,7 @@ For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p
 ## Three-minute baseline
 
 1. **Overview (40 seconds).** Show the £12,480.50 available balance, September plan, saved recipients and recent activity. This is the existing customer experience, not a provider admin console.
-2. **Make a payment (80 seconds).** Click Make a payment. Choose Northline Studio, enter `25.99`, add an optional reference. Select Debit card, labelled Adyen. Click Review payment, inspect amount, provider, fee and remaining balance, then Confirm £25.99 payment. The receipt is explicitly a demo receipt.
+2. **Make a payment (80 seconds).** Click Make a payment. Choose Northline Studio, enter `25.99`, add an optional reference. Select Debit card, labelled Adyen. Click Review payment, inspect amount, provider, fee and remaining balance, then Continue to verification. Confirm with the demo biometric, or open the 6-digit passcode fallback and enter the rehearsal code shown on the screen. The receipt is explicitly a demo receipt. This step rehearses the [PAY-152 SCA gate](psd2-sca-signoff.md). It does not send a text message and it does not enable production canary traffic.
 3. **Close the loop (30 seconds).** Return to Overview. Balance is £12,454.51. Open Activity, search your reference, and open the transaction receipt. Refresh to demonstrate local persistence.
 4. **Budgets (30 seconds).** Open Budgets, edit Shopping, save a new monthly limit. The spending plan recalculates. No real account settings change.
 
@@ -30,10 +30,10 @@ For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p
 
 ## Planner handoff
 
-There are exactly two providers. A new European payment experience is intentionally absent, including hidden code or a pre-selected vendor. Frame the next task around evaluating local payment coverage, choosing a suitable provider against [the playbook](provider-expansion-playbook.md), and changing this payment screen.
+There are exactly two providers. No third provider is named or implemented. The payment screen includes a labelled PSD2 SCA rehearsal for [PAY-152](psd2-sca-signoff.md); European corridor clearance and production canary traffic remain closed. Frame later provider work around evaluating local payment coverage and choosing a suitable provider against [the playbook](provider-expansion-playbook.md).
 
 Use [company strategy](company-strategy.md), [compliance policy](compliance-policy.md), [API standards](api-standards.md) and [workspace map](workspace-map.md) as fictional planning context. They are repository documents, not published Confluence pages or existing Jira work items.
 
 ## Limits
 
-This browser demo does not implement an API, authentication, SCA or actual provider SDKs. The fee is a simulated £0.00, not a quotation. Reload preserves this browser's state; tabs are not live-synchronized. Clear only the `meridian_bank_state` localStorage key if manual recovery is necessary, rather than clearing unrelated browser data.
+This browser demo does not implement an API, production authentication or actual provider SDKs. The verification step is a labelled SCA rehearsal, not a device-bound control. The fee is a simulated £0.00, not a quotation. Reload preserves this browser's state; tabs are not live-synchronized. Clear only the `meridian_bank_state` localStorage key if manual recovery is necessary, rather than clearing unrelated browser data.

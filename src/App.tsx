@@ -39,6 +39,17 @@ import {
   type Scenario,
   type Transaction,
 } from './domain/model';
+import {
+  DEMO_REHEARSAL_PASSCODE,
+  FALLBACK_COPY,
+  PASSCODE_FIELD_LABEL,
+  SCA_SIGNOFF,
+  acceptDeviceBiometric,
+  attemptPasscode,
+  biometricPromptCopy,
+  evaluateCanaryGate,
+  type ScaAuditEvent,
+} from './domain/sca';
 import { useBank } from './hooks/useBank';
 
 type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
@@ -61,6 +72,12 @@ const dateLabel = (date: string) =>
     month: 'short',
     timeZone: 'UTC',
   });
+const PAYMENT_STEPS = [
+  { id: 'details', label: 'Details' },
+  { id: 'review', label: 'Review' },
+  { id: 'authenticate', label: 'Verify' },
+  { id: 'done', label: 'Done' },
+] as const;
 const blankDraft = (): PaymentDraft => ({
   recipientId: RECIPIENTS[0].id,
   amount: '',
@@ -148,8 +165,14 @@ export default function App() {
 
   const [page, setPage] = useState<Page>('Overview');
   const [draft, setDraft] = useState<PaymentDraft>(blankDraft);
-  const [step, setStep] = useState<'details' | 'review' | 'done'>('details');
+  const [step, setStep] = useState<'details' | 'review' | 'authenticate' | 'done'>('details');
   const [errors, setErrors] = useState<string[]>([]);
+  const [authMode, setAuthMode] = useState<'biometric' | 'passcode'>('biometric');
+  const [passcode, setPasscode] = useState('');
+  const [passcodeAttempts, setPasscodeAttempts] = useState(0);
+  const [scaLocked, setScaLocked] = useState(false);
+  const [scaAccepted, setScaAccepted] = useState(false);
+  const [audit, setAudit] = useState<ScaAuditEvent | null>(null);
   const [scenario, setScenario] = useState<Scenario>('success');
   const [receipt, setReceipt] = useState<Transaction | null>(null);
   const [lastPayment, setLastPayment] = useState<Transaction | null>(null);
@@ -198,14 +221,28 @@ export default function App() {
     setPage(next);
     setNotice('');
   }
+  function resetAuthentication() {
+    setAuthMode('biometric');
+    setPasscode('');
+    setPasscodeAttempts(0);
+    setScaLocked(false);
+    setScaAccepted(false);
+    setAudit(null);
+  }
   function startPayment(recipientId?: string) {
     setDraft({ ...blankDraft(), recipientId: recipientId ?? RECIPIENTS[0].id });
     setStep('details');
     setErrors([]);
     setLastPayment(null);
+    resetAuthentication();
     paymentId.current = crypto.randomUUID();
     confirming.current = false;
     navigate('Payments');
+  }
+  function beginVerification() {
+    resetAuthentication();
+    setErrors([]);
+    setStep('authenticate');
   }
   async function confirmPayment() {
     if (confirming.current) return;
@@ -225,6 +262,44 @@ export default function App() {
       confirming.current = false;
     }
   }
+  function approveBiometric() {
+    if (scaLocked || busy) return;
+    const nextAudit = acceptDeviceBiometric(
+      {
+        paymentId: paymentId.current,
+        recipientId: draft.recipientId,
+        amountPence: amount,
+      },
+      false,
+    );
+    setAudit(nextAudit);
+    setScaAccepted(true);
+    setErrors([]);
+    void confirmPayment();
+  }
+  function submitPasscode() {
+    if (scaLocked || busy) return;
+    const result = attemptPasscode({
+      link: {
+        paymentId: paymentId.current,
+        recipientId: draft.recipientId,
+        amountPence: amount,
+      },
+      passcode,
+      attemptsUsed: passcodeAttempts,
+    });
+    setPasscodeAttempts(result.attemptsUsed);
+    setScaLocked(result.locked);
+    setAudit(result.audit);
+    if (!result.ok) {
+      setScaAccepted(false);
+      setErrors([result.error || 'Passcode not recognised']);
+      return;
+    }
+    setErrors([]);
+    setScaAccepted(true);
+    void confirmPayment();
+  }
   function openBudget(budget: Budget) {
     setBudgetEdit(budget);
     setBudgetAmount((budget.limit / 100).toFixed(2));
@@ -238,6 +313,7 @@ export default function App() {
       setScenario('success');
       setErrors([]);
       setLastPayment(null);
+      resetAuthentication();
       setQuery('');
       setFilter('all');
       setDialog(null);
@@ -583,24 +659,24 @@ export default function App() {
             <div className="payment-layout">
               <section className="panel payment-panel">
                 <ol className="stepper" aria-label="Payment progress">
-                  {['Payment details', 'Review', 'Complete'].map((label, index) => (
+                  {PAYMENT_STEPS.map((item, index) => (
                     <li
-                      key={label}
+                      key={item.id}
                       className={
-                        index <= ['details', 'review', 'done'].indexOf(step) ? 'reached' : ''
+                        index <= PAYMENT_STEPS.findIndex((stepItem) => stepItem.id === step)
+                          ? 'reached'
+                          : ''
                       }
-                      aria-current={
-                        index === ['details', 'review', 'done'].indexOf(step) ? 'step' : undefined
-                      }
+                      aria-current={item.id === step ? 'step' : undefined}
                     >
                       <span>
-                        {index < ['details', 'review', 'done'].indexOf(step) ? (
+                        {index < PAYMENT_STEPS.findIndex((stepItem) => stepItem.id === step) ? (
                           <Check size={13} />
                         ) : (
                           index + 1
                         )}
                       </span>
-                      {label}
+                      {item.label}
                     </li>
                   ))}
                 </ol>
@@ -608,11 +684,19 @@ export default function App() {
                   <div role="alert" className="message">
                     <SectionMessage
                       appearance="error"
-                      title={step === 'review' ? 'Payment not completed' : 'Check your payment'}
+                      title={
+                        step === 'authenticate' && !scaAccepted
+                          ? 'Verification needs another try'
+                          : step === 'review' || step === 'authenticate'
+                            ? 'Payment not completed'
+                            : 'Check your payment'
+                      }
                     >
                       <p>
                         {errors.join('. ')}
-                        {step === 'review' && connectionMode === 'standalone'
+                        {(step === 'review' || step === 'authenticate') &&
+                        connectionMode === 'standalone' &&
+                        scaAccepted
                           ? '. No money has left your account. You can go back or change the demo scenario and retry.'
                           : ''}
                       </p>
@@ -790,17 +874,128 @@ export default function App() {
                       >
                         Back to details
                       </Button>
-                      <Button
-                        appearance="primary"
-                        onClick={confirmPayment}
-                        isDisabled={
-                          busy ||
-                          (connectionMode === 'connected' && connectionStatus !== 'connected')
-                        }
-                      >
-                        Confirm {money(amount)} payment
+                      <Button appearance="primary" onClick={beginVerification}>
+                        Continue to verification
                       </Button>
                     </div>
+                  </div>
+                )}
+                {step === 'authenticate' && (
+                  <div className="sca-panel">
+                    <div className="form-intro">
+                      <h2>Confirm it&apos;s you.</h2>
+                      <p>{biometricPromptCopy(recipient.name, money(amount))}</p>
+                    </div>
+                    <SectionMessage appearance="information" title="In-app check only">
+                      <p>{FALLBACK_COPY}</p>
+                    </SectionMessage>
+                    <p className="muted">
+                      Rehearsal only. {SCA_SIGNOFF.registerId} keeps production canary closed.
+                    </p>
+                    {scaLocked && (
+                      <SectionMessage appearance="warning" title="This payment is locked">
+                        <p>Start a new payment to try again. A text message cannot unlock it.</p>
+                      </SectionMessage>
+                    )}
+                    {!scaLocked && !scaAccepted && authMode === 'biometric' && (
+                      <div className="form-footer sca-actions">
+                        <Button
+                          onClick={() => {
+                            setStep('review');
+                            setErrors([]);
+                          }}
+                        >
+                          Back to review
+                        </Button>
+                        <Button appearance="primary" onClick={approveBiometric} isDisabled={busy}>
+                          Confirm with demo biometric
+                        </Button>
+                        <Button appearance="subtle" onClick={() => setAuthMode('passcode')}>
+                          Use 6-digit passcode instead
+                        </Button>
+                      </div>
+                    )}
+                    {!scaLocked && !scaAccepted && authMode === 'passcode' && (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          submitPasscode();
+                        }}
+                      >
+                        <label className="field-label" htmlFor="rehearsal-passcode">
+                          {PASSCODE_FIELD_LABEL}
+                        </label>
+                        <Textfield
+                          id="rehearsal-passcode"
+                          name="rehearsal-passcode"
+                          value={passcode}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          maxLength={6}
+                          isInvalid={errors.length > 0}
+                          onChange={(event) => setPasscode(event.currentTarget.value)}
+                          aria-describedby="passcode-help"
+                        />
+                        <small id="passcode-help">
+                          Rehearsal passcode{' '}
+                          <strong className="sca-code">{DEMO_REHEARSAL_PASSCODE}</strong>. This is a
+                          fictional code shown on purpose. Do not enter a personal PIN.
+                        </small>
+                        <div className="form-footer sca-actions">
+                          <Button type="button" onClick={() => setAuthMode('biometric')}>
+                            Use demo biometric instead
+                          </Button>
+                          <Button type="submit" appearance="primary" isDisabled={busy}>
+                            Verify passcode
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                    {scaAccepted && errors.length === 0 && (
+                      <p role="status">Checking this demo payment.</p>
+                    )}
+                    {scaAccepted && errors.length > 0 && (
+                      <div className="form-footer">
+                        <Button
+                          onClick={() => {
+                            setStep('review');
+                            setErrors([]);
+                          }}
+                        >
+                          Back to review
+                        </Button>
+                        <Button
+                          appearance="primary"
+                          onClick={confirmPayment}
+                          isDisabled={
+                            busy ||
+                            (connectionMode === 'connected' && connectionStatus !== 'connected')
+                          }
+                        >
+                          Retry payment
+                        </Button>
+                      </div>
+                    )}
+                    {audit && (
+                      <dl className="detail-list" aria-label="Rehearsal authentication record">
+                        <div>
+                          <dt>Factor</dt>
+                          <dd>
+                            {audit.factor === 'device_biometric'
+                              ? 'Device biometric'
+                              : 'In-app passcode'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Outcome</dt>
+                          <dd>{audit.outcome}</dd>
+                        </div>
+                        <div>
+                          <dt>Dynamic link</dt>
+                          <dd>{audit.dynamicLink}</dd>
+                        </div>
+                      </dl>
+                    )}
                   </div>
                 )}
                 {step === 'done' && lastPayment && (
@@ -818,6 +1013,22 @@ export default function App() {
                       <strong>{lastPayment.reference}</strong>
                     </div>
                     <p className="muted">Your balance and September budget are up to date.</p>
+                    {audit && (
+                      <dl className="detail-list" aria-label="Rehearsal authentication record">
+                        <div>
+                          <dt>Authentication</dt>
+                          <dd>
+                            {audit.factor === 'device_biometric'
+                              ? 'Demo biometric'
+                              : 'In-app passcode'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Dynamic link</dt>
+                          <dd>{audit.dynamicLink}</dd>
+                        </div>
+                      </dl>
+                    )}
                     <div className="success-actions">
                       <Button appearance="primary" onClick={() => navigate('Overview')}>
                         Back to overview
@@ -864,7 +1075,8 @@ export default function App() {
                 </div>
                 <p className="simulation-note">
                   <Globe2 size={15} />
-                  Provider routing is simulated. No card or bank details are collected.
+                  Provider routing is simulated. Verification stays in this rehearsal and does not
+                  send a text message. No card or bank details are collected.
                 </p>
               </aside>
             </div>
@@ -1102,6 +1314,12 @@ export default function App() {
           <p className="muted">
             Fixed rehearsal date: 18 September 2026. No requests are sent to Adyen or Worldpay.
           </p>
+          <SectionMessage appearance="information" title="Production canary closed">
+            <p>
+              {evaluateCanaryGate(SCA_SIGNOFF, { liveTraffic: true }).reason} This control cannot
+              turn it on.
+            </p>
+          </SectionMessage>
           {connectionMode === 'connected' && (
             <>
               <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid #DCDFE4' }} />
@@ -1236,6 +1454,7 @@ export default function App() {
                     setStep('details');
                     setErrors([]);
                     setLastPayment(null);
+                    resetAuthentication();
                     setReceipt(null);
                     setBudgetEdit(null);
                     paymentId.current = crypto.randomUUID();

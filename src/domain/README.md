@@ -14,4 +14,6 @@ Fictional GBP simulation, with no network or real credentials.
 
 `loadState()` always returns `{ state, warning }`; corrupt data resets to fresh fixtures with a warning. `saveState(state)` returns false for invalid data, denied storage or quota exhaustion. Schemas require safe integer amounts, valid calendar dates, known recipients, matching provider/method pairs, unique transaction IDs and exactly five positive budgets. Unexpected fields are rejected.
 
+`sca.ts` is the PAY-152 rehearsal gate. It permits only a simulated device biometric and a 6-digit in-app passcode, rejects SMS and SIM one-time codes, binds payee and amount into the audit payload, and keeps production canary closed after the written sign-off is logged. The passcode checked here is the displayed fictional rehearsal code.
+
 Unit tests live next to the code, including boundary regressions in `edge-cases.test.ts`. Run `npm test` for the current test count.

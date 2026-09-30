@@ -30,7 +30,8 @@ test('web and mobile share real backend payments, budgets and isolated rooms', a
   await web.getByLabel('Amount (GBP)').fill('25.99');
   await web.getByLabel('Reference (optional)').fill('Shared web payment');
   await web.getByRole('button', { name: 'Review payment' }).click();
-  await web.getByRole('button', { name: 'Confirm £25.99 payment' }).click();
+  await web.getByRole('button', { name: 'Continue to verification' }).click();
+  await web.getByRole('button', { name: 'Confirm with demo biometric' }).click();
   await expect(web.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
   await expect(mobile.getByTestId('mobile-balance')).toHaveText('£12,454.51', { timeout: 10000 });
   await mobile.getByRole('button', { name: 'Make a payment', exact: false }).click();

@@ -19,4 +19,17 @@ for (const width of [1440, 390])
         name,
       ).toEqual([]);
     }
+    await page.getByRole('button', { name: 'Payments', exact: true }).click();
+    await page.getByLabel('Amount (GBP)').fill('10.00');
+    await page.getByRole('button', { name: 'Review payment' }).click();
+    await page.getByRole('button', { name: 'Continue to verification' }).click();
+    const biometric = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(biometric.violations, 'verify').toEqual([]);
+    await page.getByRole('button', { name: 'Use 6-digit passcode instead' }).click();
+    const passcode = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(passcode.violations, 'passcode').toEqual([]);
   });
