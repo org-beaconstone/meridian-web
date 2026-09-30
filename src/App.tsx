@@ -43,7 +43,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection' | 'Whiteboard';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Whiteboard' | 'Connection';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -427,7 +427,7 @@ export default function App() {
                     : page === 'Budgets'
                       ? 'A plan for what matters.'
                       : page === 'Whiteboard'
-                        ? 'Your ideas, pinned in one place.'
+                        ? 'Your ideas, in one place.'
                         : 'The story of your spending.'}
               </h1>
               <p>
@@ -438,11 +438,11 @@ export default function App() {
                     : page === 'Budgets'
                       ? 'Small intentions today. More possibilities tomorrow.'
                       : page === 'Whiteboard'
-                        ? 'Capture thoughts and colour-code what matters most.'
+                        ? 'Pin a thought. Pick a colour. Keep things clear.'
                         : 'Every payment, in one clear picture.'}
               </p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'Whiteboard' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -966,7 +966,9 @@ export default function App() {
               <Transactions transactions={filtered} onSelect={setReceipt} />
             </section>
           )}
+
           {page === 'Whiteboard' && <Whiteboard />}
+
           <footer className="page-footer">
             <span>
               <img src="./meridian.svg" alt="" />A clearer kind of banking.
