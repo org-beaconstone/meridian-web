@@ -21,7 +21,7 @@ Node 22.12+ is required. The default standalone mode needs no API keys, backend 
 ## Interactive features
 
 - Overview with available balance, monthly spending, quick recipients and recent activity.
-- Payment flow: saved recipient, GBP amount, reference, payment method, review, confirmation and receipt.
+- Payment flow: UK Faster Payments and US domestic transfers with a saved recipient, plus a euro IBAN transfer with live checksum feedback, an exchange-rate review and a one-time idempotency key.
 - Current provider registry: **Adyen** for the card simulation, **Worldpay** for the bank-payment simulation. This routing is demo-specific, not a claim about product capabilities.
 - Successful payments debit the demo balance once and update activity and category spending.
 - Budget editing with validation, searchable/filterable activity and browser-local persistence.
@@ -32,7 +32,7 @@ The next provider integration is deliberately absent. There is no provider insta
 
 ## Scope and safety
 
-This is a **local simulation**, not a banking service. It never collects financial credentials, calls provider APIs or moves money. The saved debit card and bank account are masked fictional fixtures. Don't enter personal data in the reference field: it is stored locally, without encryption. The fixed demo date is **18 September 2026**, and currency is GBP only. Reload restores state from this browser; separate tabs don't synchronize live.
+This is a **local simulation**, not a banking service. It never collects financial credentials, calls provider APIs or moves money. The saved debit card and bank account are masked fictional fixtures. Don't enter personal data in the reference field: it is stored locally, without encryption. The fixed demo date is **18 September 2026**. The everyday account is GBP. Euro transfers take a fictional IBAN, check it in the browser, and debit the sterling equivalent at a fixed demo rate. Reload restores state from this browser; separate tabs don't synchronize live.
 
 Frontend validation and idempotency are not server-side security. No real authentication, authorization, SCA, PCI certification, webhook handling, settlement or bank reconciliation is implemented. The policy and architecture docs describe proposed requirements, not compliance evidence.
 

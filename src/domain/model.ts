@@ -1,10 +1,16 @@
 // Domain model for Meridian banking demo
 // Fictional data only - no real payments or credentials
 
+import { normalizeIban, validateIban } from './iban';
+
 export type Category = 'Shopping' | 'Food & drink' | 'Transport' | 'Bills' | 'Lifestyle';
 export type PaymentMethod = 'card' | 'bank';
 export type ProviderId = 'adyen' | 'worldpay';
 export type Scenario = 'success' | 'declined' | 'unavailable';
+export type TransferCorridor = 'uk-faster-payments' | 'us-domestic' | 'eur-sepa';
+
+export { formatIban, validateIban } from './iban';
+export type { IbanValidation } from './iban';
 
 export interface Recipient {
   id: string;
@@ -27,6 +33,12 @@ export interface Transaction {
   method: PaymentMethod;
   status: 'completed' | 'declined';
   note: string;
+  corridor?: TransferCorridor;
+  /** Normalised IBAN for a euro transfer. */
+  iban?: string;
+  /** Face value in euro cents when corridor is eur-sepa. */
+  settlementAmount?: number;
+  settlementCurrency?: 'EUR';
 }
 
 export interface Budget {
@@ -46,6 +58,97 @@ export interface PaymentDraft {
   amount: string; // user input, to be parsed
   method: PaymentMethod;
   note: string;
+  /** Omitted drafts stay on the original UK Faster Payments path. */
+  corridor?: TransferCorridor;
+  recipientName?: string;
+  iban?: string;
+}
+
+export interface PaymentRequestPayload {
+  idempotencyKey: string;
+  corridor: TransferCorridor;
+  recipientId: string;
+  recipientName: string;
+  amountMinor: number;
+  currency: 'GBP' | 'EUR';
+  /** Sterling pence actually debited from the everyday account. */
+  debitMinor: number;
+  method: PaymentMethod;
+  note: string;
+  iban?: string;
+  feeMinor: number;
+  feeCurrency: 'GBP' | 'EUR';
+  exchangeRate?: string;
+  exchangeBreakdown?: string;
+  estimatedClearing: string;
+}
+
+/** Demo quote only: 100 euro cents debit 86 sterling pence. */
+export const DEMO_EUR_GBP_RATE = {
+  numerator: 86,
+  denominator: 100,
+  label: '€1.00 = £0.86',
+  multiplier: '0.8600',
+} as const;
+
+export const EUR_TRANSFER_FEE_CENTS = 0;
+
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUuidV4(value: string): boolean {
+  return UUID_V4.test(value);
+}
+
+export function corridorOf(draft: PaymentDraft): TransferCorridor {
+  return draft.corridor ?? 'uk-faster-payments';
+}
+
+export function eurCentsToGbpPence(eurCents: number): number {
+  return Math.round((eurCents * DEMO_EUR_GBP_RATE.numerator) / DEMO_EUR_GBP_RATE.denominator);
+}
+
+export function eurTransferQuote(eurCents: number): {
+  eurCents: number;
+  gbpPence: number;
+  feeEurCents: 0;
+  rateLabel: string;
+  breakdown: string;
+} {
+  const gbpPence = eurCentsToGbpPence(eurCents);
+  return {
+    eurCents,
+    gbpPence,
+    feeEurCents: EUR_TRANSFER_FEE_CENTS,
+    rateLabel: DEMO_EUR_GBP_RATE.label,
+    breakdown: `${money(eurCents, 'EUR')} × ${DEMO_EUR_GBP_RATE.multiplier} = ${money(gbpPence)}`,
+  };
+}
+
+/** Next weekday after the fixed rehearsal date, for the euro clearing estimate. */
+export function clearingEstimate(corridor: TransferCorridor): string {
+  if (corridor === 'uk-faster-payments') return 'Usually within minutes';
+  if (corridor === 'us-domestic') return '1–3 business days';
+  const date = new Date(`${DEMO_DATE}T12:00:00Z`);
+  do {
+    date.setUTCDate(date.getUTCDate() + 1);
+  } while (date.getUTCDay() === 0 || date.getUTCDay() === 6);
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const when = `${weekdays[date.getUTCDay()]} ${date.getUTCDate()} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+  return `Next business day · ${when}`;
 }
 
 export type PaymentResult =
@@ -149,7 +252,10 @@ export function getProvider(method: PaymentMethod): Provider {
  * - rejects amounts >£10000 or zero
  * Returns [pence, error] tuple
  */
-export function parseAmount(input: string): [number | null, string | null] {
+export function parseAmount(
+  input: string,
+  currency: 'GBP' | 'EUR' = 'GBP',
+): [number | null, string | null] {
   const trimmed = input.trim();
 
   // Empty or whitespace only
@@ -198,8 +304,11 @@ export function parseAmount(input: string): [number | null, string | null] {
   }
 
   if (pence > 1000000) {
-    // 10000 pounds
-    return [null, 'Amount cannot exceed £10,000'];
+    // 10000 major units
+    return [
+      null,
+      currency === 'EUR' ? 'Amount cannot exceed €10,000' : 'Amount cannot exceed £10,000',
+    ];
   }
 
   return [pence, null];
@@ -209,36 +318,151 @@ export function parseAmount(input: string): [number | null, string | null] {
  * Validate a payment draft against current state
  * Returns array of validation errors (empty = valid)
  */
+function recipientNameError(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed) return 'Recipient name is required';
+  if (trimmed.length < 2) return 'Recipient name is too short';
+  if (trimmed.length > 70) return 'Recipient name is too long (max 70 characters)';
+  if (!/^[\p{L}][\p{L}\s.'’&-]*$/u.test(trimmed)) return 'Enter the recipient name using letters';
+  return null;
+}
+
 export function validatePayment(state: BankState, draft: PaymentDraft): string[] {
   const errors: string[] = [];
+  const corridor = corridorOf(draft);
 
-  // Validate recipient exists
+  if (!['uk-faster-payments', 'us-domestic', 'eur-sepa'].includes(corridor)) {
+    errors.push('Invalid transfer type');
+  }
+
+  if (draft.note && draft.note.length > 200) {
+    errors.push('Note is too long (max 200 characters)');
+  }
+
+  if (corridor === 'eur-sepa') {
+    const nameError = recipientNameError(draft.recipientName ?? '');
+    if (nameError) errors.push(nameError);
+
+    const iban = validateIban(draft.iban ?? '');
+    if (iban.status === 'empty') errors.push('IBAN is required');
+    else if (iban.status === 'invalid') errors.push(iban.message);
+
+    if (draft.method !== 'bank') errors.push('European transfers use a bank payment');
+
+    const [eurCents, parseError] = parseAmount(draft.amount, 'EUR');
+    if (parseError) errors.push(parseError);
+    if (eurCents !== null) {
+      const debit = eurCentsToGbpPence(eurCents);
+      if (debit > state.balance) errors.push('Insufficient balance');
+    }
+    return errors;
+  }
+
+  // UK Faster Payments and US domestic keep the original saved-recipient rules.
   if (!RECIPIENTS.find((r) => r.id === draft.recipientId)) {
     errors.push('Invalid recipient');
   }
 
-  // Validate amount
   const [pence, parseError] = parseAmount(draft.amount);
   if (parseError) {
     errors.push(parseError);
   }
 
-  // Check balance if amount parsed successfully
   if (pence !== null && pence > state.balance) {
     errors.push('Insufficient balance');
   }
 
-  // Validate payment method
   if (!['card', 'bank'].includes(draft.method)) {
     errors.push('Invalid payment method');
   }
 
-  // Validate note (optional but if provided, reasonable length)
-  if (draft.note && draft.note.length > 200) {
-    errors.push('Note is too long (max 200 characters)');
+  return errors;
+}
+
+function samePayment(existing: Transaction, draft: PaymentDraft): boolean {
+  if (existing.status !== 'completed' || draft.note !== existing.note) return false;
+  const corridor = corridorOf(draft);
+  if ((existing.corridor ?? 'uk-faster-payments') !== corridor) return false;
+
+  if (corridor === 'eur-sepa') {
+    const [eurCents] = parseAmount(draft.amount, 'EUR');
+    const iban = normalizeIban(draft.iban ?? '');
+    return (
+      existing.iban === iban &&
+      existing.settlementAmount === eurCents &&
+      existing.name === (draft.recipientName ?? '').trim() &&
+      existing.method === 'bank' &&
+      eurCents !== null &&
+      existing.amount === eurCentsToGbpPence(eurCents)
+    );
   }
 
-  return errors;
+  const [pence] = parseAmount(draft.amount);
+  return (
+    pence === existing.amount &&
+    draft.recipientId === existing.recipientId &&
+    draft.method === existing.method
+  );
+}
+
+export function createPaymentPayload(
+  state: BankState,
+  draft: PaymentDraft,
+  idempotencyKey: string,
+): { ok: true; payload: PaymentRequestPayload } | { ok: false; errors: string[] } {
+  if (!idempotencyKey.trim()) return { ok: false, errors: ['Transaction ID is required'] };
+  const errors = validatePayment(state, draft);
+  if (errors.length > 0) return { ok: false, errors };
+
+  const corridor = corridorOf(draft);
+  if (corridor === 'eur-sepa') {
+    const iban = validateIban(draft.iban ?? '');
+    if (iban.status !== 'valid') return { ok: false, errors: ['IBAN is required'] };
+    const [eurCents] = parseAmount(draft.amount, 'EUR');
+    if (eurCents === null) return { ok: false, errors: ['Invalid amount'] };
+    const quote = eurTransferQuote(eurCents);
+    return {
+      ok: true,
+      payload: {
+        idempotencyKey,
+        corridor,
+        recipientId: `eur-${iban.iban}`,
+        recipientName: (draft.recipientName ?? '').trim(),
+        amountMinor: eurCents,
+        currency: 'EUR',
+        debitMinor: quote.gbpPence,
+        method: 'bank',
+        note: draft.note,
+        iban: iban.iban,
+        feeMinor: EUR_TRANSFER_FEE_CENTS,
+        feeCurrency: 'EUR',
+        exchangeRate: quote.rateLabel,
+        exchangeBreakdown: quote.breakdown,
+        estimatedClearing: clearingEstimate(corridor),
+      },
+    };
+  }
+
+  const [pence] = parseAmount(draft.amount);
+  const recipient = RECIPIENTS.find((item) => item.id === draft.recipientId);
+  if (pence === null || !recipient) return { ok: false, errors: ['Invalid payment'] };
+  return {
+    ok: true,
+    payload: {
+      idempotencyKey,
+      corridor,
+      recipientId: recipient.id,
+      recipientName: recipient.name,
+      amountMinor: pence,
+      currency: 'GBP',
+      debitMinor: pence,
+      method: draft.method,
+      note: draft.note,
+      feeMinor: 0,
+      feeCurrency: 'GBP',
+      estimatedClearing: clearingEstimate(corridor),
+    },
+  };
 }
 
 /**
@@ -420,15 +644,14 @@ export function updateBudget(
 }
 
 /**
- * Format pence to en-GB currency string
- * E.g. 3250 → "£32.50"
+ * Format minor units to an en-GB currency string.
+ * E.g. 3250 → "£32.50", or "€32.50" when currency is EUR.
  */
-export function money(pence: number): string {
-  const pounds = pence / 100;
+export function money(minor: number, currency: 'GBP' | 'EUR' = 'GBP'): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
-    currency: 'GBP',
-  }).format(pounds);
+    currency,
+  }).format(minor / 100);
 }
 
 /**
@@ -477,15 +700,7 @@ export function executePayment(
   // Check idempotency: if ID already exists, verify same payload
   const existing = state.transactions.find((txn) => txn.id === id);
   if (existing) {
-    // Verify the payload matches the stored transaction
-    const [existingAmount] = parseAmount(draft.amount);
-    if (
-      existingAmount !== existing.amount ||
-      draft.recipientId !== existing.recipientId ||
-      draft.method !== existing.method ||
-      draft.note !== existing.note ||
-      existing.status !== 'completed'
-    ) {
+    if (!samePayment(existing, draft)) {
       return {
         ok: false,
         error: 'Transaction ID already used with different payload',
@@ -499,32 +714,14 @@ export function executePayment(
     };
   }
 
-  // Validate payment
-  const validationErrors = validatePayment(state, draft);
-  if (validationErrors.length > 0) {
+  const prepared = createPaymentPayload(state, draft, id);
+  if (!prepared.ok) {
     return {
       ok: false,
-      error: validationErrors[0],
+      error: prepared.errors[0],
     };
   }
-
-  // Parse amount (already validated)
-  const [pence] = parseAmount(draft.amount);
-  if (pence === null) {
-    return {
-      ok: false,
-      error: 'Invalid amount',
-    };
-  }
-
-  // Get recipient
-  const recipient = RECIPIENTS.find((r) => r.id === draft.recipientId);
-  if (!recipient) {
-    return {
-      ok: false,
-      error: 'Recipient not found',
-    };
-  }
+  const payload = prepared.payload;
 
   // Apply scenario
   if (scenario === 'declined') {
@@ -541,26 +738,34 @@ export function executePayment(
     };
   }
 
-  // Success path
-  const provider = getProvider(draft.method);
+  const recipient = RECIPIENTS.find((item) => item.id === payload.recipientId);
+  const provider = getProvider(payload.method);
   const transaction: Transaction = {
     id,
     reference: `REF-${now.split('T')[0].replace(/-/g, '')}-${id.slice(-3)}`,
-    recipientId: draft.recipientId,
-    name: recipient.name,
-    category: recipient.category,
-    amount: pence,
-    date: now.split('T')[0], // Extract date part
+    recipientId: payload.recipientId,
+    name: payload.recipientName,
+    category: payload.corridor === 'eur-sepa' ? 'Bills' : recipient!.category,
+    amount: payload.debitMinor,
+    date: now.split('T')[0],
     provider: provider.id,
-    method: draft.method,
+    method: payload.method,
     status: 'completed',
-    note: draft.note,
+    note: payload.note,
+    corridor: payload.corridor,
+    ...(payload.corridor === 'eur-sepa'
+      ? {
+          iban: payload.iban,
+          settlementAmount: payload.amountMinor,
+          settlementCurrency: 'EUR' as const,
+        }
+      : {}),
   };
 
   // Update state
   const newState: BankState = {
     ...state,
-    balance: state.balance - pence,
+    balance: state.balance - payload.debitMinor,
     transactions: [...state.transactions, transaction],
   };
 

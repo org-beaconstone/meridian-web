@@ -6,7 +6,7 @@ Fictional GBP simulation, with no network or real credentials.
 - `storage.ts`: strict Zod validation, versioned browser state and graceful recovery.
 - `index.ts`: public barrel exports. Import using relative paths; this project has no `@/` alias.
 
-`parseAmount(string)` returns `[pence | null, error | null]`. It rejects zero, signs, exponent notation, more than two decimals and amounts over £10,000. `validatePayment(state, draft)` also checks the recipient, method, available balance and note length.
+`parseAmount(string)` returns `[minor units | null, error | null]`. It rejects zero, signs, exponent notation, more than two decimals and amounts over 10,000 major units. Pass `'EUR'` when the typed amount is euros. `validatePayment(state, draft)` checks the recipient, method, available sterling balance and note length. Omitted `corridor` stays on UK Faster Payments. `us-domestic` uses that same saved-recipient ledger. `eur-sepa` requires a recipient name and an IBAN that passes country length and MOD-97, then debits `eurCentsToGbpPence` through the existing bank provider.
 
 `executePayment(state, draft, scenario, id, now)` returns a discriminated union: `{ ok: true, state, transaction }` or `{ ok: false, error }`. It does not mutate the input. Repeated successful IDs with the same payload do not debit again. An altered recipient, amount, method or note with the same ID is rejected. Decline and unavailable return errors without adding transactions or moving money. This in-memory behavior is not a server-side idempotency guarantee.
 

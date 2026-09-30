@@ -4,9 +4,13 @@ import {
   type PaymentDraft,
   RECIPIENTS,
   PROVIDERS,
+  clearingEstimate,
   createInitialState,
+  createPaymentPayload,
+  eurTransferQuote,
   executePayment,
   getProvider,
+  isUuidV4,
   money,
   monthlySpent,
   parseAmount,
@@ -811,6 +815,102 @@ describe('model', () => {
       PROVIDERS.forEach((p) => {
         expect(p.methods.length).toBeGreaterThan(0);
       });
+    });
+  });
+
+  describe('euro transfers', () => {
+    const state = createInitialState();
+    const eurDraft: PaymentDraft = {
+      recipientId: 'ignored',
+      recipientName: 'Ada Berger',
+      iban: 'DE89 3704 0044 0532 0130 00',
+      amount: '25.00',
+      method: 'bank',
+      note: 'Studio invoice',
+      corridor: 'eur-sepa',
+    };
+
+    it('quotes a transparent rate, zero fee and next-business-day clearing', () => {
+      const quote = eurTransferQuote(2500);
+      expect(quote.gbpPence).toBe(2150);
+      expect(quote.feeEurCents).toBe(0);
+      expect(quote.rateLabel).toBe('€1.00 = £0.86');
+      expect(quote.breakdown).toBe('€25.00 × 0.8600 = £21.50');
+      expect(clearingEstimate('eur-sepa')).toBe('Next business day · Monday 21 September 2026');
+      expect(clearingEstimate('uk-faster-payments')).toBe('Usually within minutes');
+      expect(clearingEstimate('us-domestic')).toBe('1–3 business days');
+    });
+
+    it('builds a UUID-addressed payload and debits sterling once', () => {
+      const key = '11111111-1111-4111-8111-111111111111';
+      expect(isUuidV4(key)).toBe(true);
+      expect(isUuidV4('txn-new-001')).toBe(false);
+      const prepared = createPaymentPayload(state, eurDraft, key);
+      expect(prepared.ok).toBe(true);
+      if (!prepared.ok) return;
+      expect(prepared.payload.idempotencyKey).toBe(key);
+      expect(prepared.payload.feeMinor).toBe(0);
+      expect(prepared.payload.iban).toBe('DE89370400440532013000');
+
+      const paid = executePayment(state, eurDraft, 'success', key, '2026-09-18');
+      expect(paid.ok).toBe(true);
+      if (!paid.ok) return;
+      expect(paid.state.balance).toBe(state.balance - 2150);
+      expect(paid.transaction.provider).toBe('worldpay');
+      expect(paid.transaction.settlementAmount).toBe(2500);
+      expect(paid.transaction.settlementCurrency).toBe('EUR');
+      expect(paid.transaction.category).toBe('Bills');
+
+      const again = executePayment(paid.state, eurDraft, 'success', key, '2026-09-18');
+      expect(again.ok && again.state.balance).toBe(paid.state.balance);
+    });
+
+    it('rejects a reused key when the IBAN changes', () => {
+      const paid = executePayment(state, eurDraft, 'success', 'eur-key', '2026-09-18');
+      expect(paid.ok).toBe(true);
+      if (!paid.ok) return;
+      const changed = executePayment(
+        paid.state,
+        { ...eurDraft, iban: 'NL91 ABNA 0417 1643 00' },
+        'success',
+        'eur-key',
+        '2026-09-18',
+      );
+      expect(changed).toMatchObject({
+        ok: false,
+        error: 'Transaction ID already used with different payload',
+      });
+    });
+
+    it('rejects an invalid IBAN before any debit', () => {
+      const result = executePayment(
+        state,
+        { ...eurDraft, iban: 'DE89370400440532013001' },
+        'success',
+        'bad-iban',
+        '2026-09-18',
+      );
+      expect(result.ok).toBe(false);
+      expect(state.balance).toBe(1248050);
+    });
+
+    it('keeps US domestic payments on the existing sterling ledger', () => {
+      const draft: PaymentDraft = {
+        recipientId: 'northline-studio',
+        amount: '10.00',
+        method: 'card',
+        note: 'Domestic',
+        corridor: 'us-domestic',
+      };
+      const errors = validatePayment(state, draft);
+      expect(errors).toEqual([]);
+      const paid = executePayment(state, draft, 'success', 'us-key', '2026-09-18');
+      expect(paid.ok).toBe(true);
+      if (!paid.ok) return;
+      expect(paid.transaction.corridor).toBe('us-domestic');
+      expect(paid.transaction.amount).toBe(1000);
+      expect(paid.transaction.provider).toBe('adyen');
+      expect(paid.state.balance).toBe(state.balance - 1000);
     });
   });
 });
