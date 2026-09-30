@@ -23,8 +23,20 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  StickyNote,
+  Trash2,
   Wallet,
 } from 'lucide-react';
+import {
+  addStickyNote,
+  createInitialWhiteboardState,
+  DEFAULT_STICKY_COLOUR,
+  getStickyColour,
+  removeStickyNote,
+  STICKY_COLOURS,
+  type StickyColour,
+  type WhiteboardState,
+} from './domain/whiteboard';
 import Dialog from './components/Dialog';
 import {
   getProvider,
@@ -41,7 +53,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Whiteboard' | 'Connection';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -54,6 +66,7 @@ const nav = [
   { name: 'Payments', icon: ArrowUpRight },
   { name: 'Budgets', icon: PieChart },
   { name: 'Activity', icon: ReceiptText },
+  { name: 'Whiteboard', icon: StickyNote },
 ] as const;
 const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
@@ -163,6 +176,9 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [whiteboard, setWhiteboard] = useState<WhiteboardState>(createInitialWhiteboardState);
+  const [stickyText, setStickyText] = useState('');
+  const [stickyColour, setStickyColour] = useState<StickyColour>(DEFAULT_STICKY_COLOUR);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -423,7 +439,9 @@ export default function App() {
                     ? 'A little closer. One payment away.'
                     : page === 'Budgets'
                       ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                      : page === 'Whiteboard'
+                        ? 'Your ideas, in one place.'
+                        : 'The story of your spending.'}
               </h1>
               <p>
                 {page === 'Overview'
@@ -432,10 +450,12 @@ export default function App() {
                     ? 'Pay with confidence. Keep your plans in view.'
                     : page === 'Budgets'
                       ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
+                      : page === 'Whiteboard'
+                        ? 'Pin a thought. Pick a colour. Keep things clear.'
+                        : 'Every payment, in one clear picture.'}
               </p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'Whiteboard' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -959,6 +979,115 @@ export default function App() {
               <Transactions transactions={filtered} onSelect={setReceipt} />
             </section>
           )}
+
+          {page === 'Whiteboard' && (
+            <div className="whiteboard-layout">
+              <section className="panel whiteboard-add-panel" aria-labelledby="whiteboard-add-heading">
+                <h2 id="whiteboard-add-heading">Add a sticky note</h2>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!stickyText.trim()) return;
+                    setWhiteboard((prev) =>
+                      addStickyNote(prev, stickyText, stickyColour, crypto.randomUUID(), new Date().toISOString()),
+                    );
+                    setStickyText('');
+                  }}
+                >
+                  <label className="field-label" htmlFor="sticky-text">
+                    Note
+                  </label>
+                  <Textfield
+                    id="sticky-text"
+                    value={stickyText}
+                    placeholder="Type a note…"
+                    maxLength={200}
+                    onChange={(event) => setStickyText(event.currentTarget.value)}
+                  />
+                  <fieldset className="colour-fieldset">
+                    <legend className="field-label">Colour</legend>
+                    <div className="colour-palette" role="group" aria-label="Choose sticky note colour">
+                      {STICKY_COLOURS.map((option) => (
+                        <label
+                          key={option.id}
+                          className={`colour-swatch ${stickyColour === option.id ? 'selected' : ''}`}
+                          style={
+                            {
+                              '--swatch-hex': option.hex,
+                              '--swatch-border': option.border,
+                            } as CSSProperties
+                          }
+                          title={option.label}
+                        >
+                          <input
+                            type="radio"
+                            name="sticky-colour"
+                            value={option.id}
+                            checked={stickyColour === option.id}
+                            onChange={() => setStickyColour(option.id)}
+                            aria-label={option.label}
+                          />
+                          <span aria-hidden="true" />
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <div className="whiteboard-add-footer">
+                    <Button type="submit" appearance="primary" isDisabled={!stickyText.trim()}>
+                      <span className="button-with-icon">
+                        <Plus size={16} />
+                        Add note
+                      </span>
+                    </Button>
+                  </div>
+                </form>
+              </section>
+              <div className="whiteboard-canvas" aria-label="Whiteboard" aria-live="polite">
+                {whiteboard.notes.length === 0 ? (
+                  <div className="whiteboard-empty">
+                    <StickyNote size={36} />
+                    <h3>No notes yet</h3>
+                    <p>Add your first sticky note and choose a colour.</p>
+                  </div>
+                ) : (
+                  <div className="sticky-grid">
+                    {whiteboard.notes
+                      .slice()
+                      .reverse()
+                      .map((note) => {
+                        const colour = getStickyColour(note.colour);
+                        return (
+                          <article
+                            key={note.id}
+                            className="sticky-note"
+                            data-testid="sticky-note"
+                            style={
+                              {
+                                '--note-bg': colour.hex,
+                                '--note-border': colour.border,
+                              } as CSSProperties
+                            }
+                            aria-label={`Sticky note: ${note.text}`}
+                          >
+                            <p>{note.text}</p>
+                            <button
+                              className="sticky-remove"
+                              aria-label={`Remove note: ${note.text}`}
+                              onClick={() =>
+                                setWhiteboard((prev) => removeStickyNote(prev, note.id))
+                              }
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </article>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <footer className="page-footer">
             <span>
               <img src="./meridian.svg" alt="" />A clearer kind of banking.
