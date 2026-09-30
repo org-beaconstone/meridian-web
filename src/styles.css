@@ -1899,6 +1899,104 @@ strong {
 .merchant-avatar {
   color: color-mix(in srgb, var(--merchant-color, #839478) 45%, #172720);
 }
+.whiteboard {
+  display: grid;
+  gap: 22px;
+}
+.sticky-composer {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px;
+}
+.sticky-palette {
+  border: 0;
+  margin: 18px 0 16px;
+  padding: 0;
+}
+.sticky-palette legend {
+  color: var(--brand-navy);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding: 0;
+}
+.sticky-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sticky-swatch {
+  align-items: center;
+  background: white;
+  border: 1px solid #dce1d8;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  position: relative;
+}
+.sticky-swatch input {
+  cursor: pointer;
+  height: 100%;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+}
+.sticky-swatch:has(input:focus-visible) {
+  outline: 2px solid var(--ds-border-focused, #1868db);
+  outline-offset: 2px;
+}
+.sticky-swatch:has(input:checked) {
+  background: var(--ds-background-selected, #e9f2fe);
+  border-color: var(--ds-border-selected, #1868db);
+}
+.sticky-chip {
+  border: 1px solid #17272033;
+  border-radius: 4px;
+  height: 16px;
+  width: 16px;
+}
+.sticky-swatch > span:last-child {
+  color: var(--brand-navy);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sticky-composer .danger-text {
+  margin: 0 0 12px;
+}
+.sticky-board {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sticky-note {
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 0 8px 18px #142c3514;
+  color: #172720;
+  min-height: 140px;
+  padding: 16px;
+}
+.sticky-note small {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.sticky-note p {
+  font-size: 15px;
+  line-height: 1.45;
+  margin: 0;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
