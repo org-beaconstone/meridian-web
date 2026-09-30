@@ -26,6 +26,13 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import { StickyNote } from './components/StickyNote';
+import {
+  STICKY_NOTE_COLORS,
+  DEFAULT_STICKY_COLOR,
+  type StickyNoteColor,
+  type StickyNoteData,
+} from './components/stickyNoteData';
 import {
   getProvider,
   money,
@@ -163,6 +170,9 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [stickyNotes, setStickyNotes] = useState<StickyNoteData[]>([]);
+  const [stickyNoteText, setStickyNoteText] = useState('');
+  const [stickyNoteColor, setStickyNoteColor] = useState<StickyNoteColor>(DEFAULT_STICKY_COLOR);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -246,6 +256,16 @@ export default function App() {
     } else {
       setNotice(`Reset failed: ${result.error || 'Unknown error'}`);
     }
+  }
+
+  function addStickyNote() {
+    const text = stickyNoteText.trim();
+    if (!text) return;
+    setStickyNotes((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), text, color: stickyNoteColor },
+    ]);
+    setStickyNoteText('');
   }
 
   function budgetLine(budget: Budget, compact = false) {
@@ -573,6 +593,82 @@ export default function App() {
                         Make room for more <ArrowRight size={16} />
                       </button>
                     </div>
+                  </section>
+                  <section className="panel sticky-notes-panel" aria-label="Sticky notes">
+                    <div className="section-heading">
+                      <h2>Stick a thought</h2>
+                      <span className="muted">Leave a note for yourself</span>
+                    </div>
+                    {stickyNotes.length > 0 && (
+                      <div className="sticky-notes-area" aria-label="Your sticky notes">
+                        {stickyNotes.map((note, index) => (
+                          <StickyNote key={note.id} note={note} index={index} />
+                        ))}
+                      </div>
+                    )}
+                    <form
+                      className="sticky-creator"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        addStickyNote();
+                      }}
+                    >
+                      <label className="field-label" htmlFor="sticky-text">
+                        Your note
+                      </label>
+                      <Textfield
+                        id="sticky-text"
+                        value={stickyNoteText}
+                        onChange={(event) => setStickyNoteText(event.currentTarget.value)}
+                        placeholder="What's on your mind?"
+                        maxLength={80}
+                      />
+                      <fieldset className="sticky-color-fieldset">
+                        <legend className="field-label">Note colour</legend>
+                        <div className="sticky-color-palette">
+                          {STICKY_NOTE_COLORS.map((colour) => (
+                            <label
+                              key={colour.id}
+                              className="sticky-color-option"
+                              title={colour.label}
+                            >
+                              <input
+                                type="radio"
+                                name="sticky-colour"
+                                value={colour.id}
+                                checked={stickyNoteColor === colour.id}
+                                onChange={() => setStickyNoteColor(colour.id)}
+                              />
+                              <span
+                                className="sticky-color-swatch"
+                                style={{ background: colour.hex }}
+                              />
+                              <span className="sr-only">{colour.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <div className="sticky-preview-row">
+                        <div
+                          className="sticky-preview"
+                          style={{
+                            background:
+                              STICKY_NOTE_COLORS.find((c) => c.id === stickyNoteColor)?.hex ??
+                              '#FFE566',
+                          }}
+                          aria-hidden="true"
+                        >
+                          {stickyNoteText || '…'}
+                        </div>
+                        <Button
+                          type="submit"
+                          appearance="primary"
+                          isDisabled={!stickyNoteText.trim()}
+                        >
+                          Add note
+                        </Button>
+                      </div>
+                    </form>
                   </section>
                 </div>
               </div>
