@@ -34,7 +34,7 @@ The next provider integration is deliberately absent. There is no provider insta
 
 This is a **local simulation**, not a banking service. It never collects financial credentials, calls provider APIs or moves money. The saved debit card and bank account are masked fictional fixtures. Don't enter personal data in the reference field: it is stored locally, without encryption. The fixed demo date is **18 September 2026**, and currency is GBP only. Reload restores state from this browser; separate tabs don't synchronize live.
 
-Frontend validation and idempotency are not server-side security. No real authentication, authorization, SCA, PCI certification, webhook handling, settlement or bank reconciliation is implemented. The policy and architecture docs describe proposed requirements, not compliance evidence.
+Frontend validation and idempotency are not server-side security. No real authentication, authorization, PCI certification, webhook handling, settlement or bank reconciliation is implemented. The payment flow includes a labelled PSD2 SCA rehearsal (device biometric prompt and in-app 6-digit passcode). It is not production SCA, and the [PAY-152 register](docs/psd2-sca-signoff.md) keeps live canary traffic closed. Policy docs describe proposed requirements, not compliance evidence.
 
 ## Project layout
 

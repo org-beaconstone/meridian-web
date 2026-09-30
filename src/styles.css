@@ -1063,6 +1063,21 @@ strong {
   font-size: 9px;
   color: var(--muted);
 }
+.sca-panel {
+  display: grid;
+  gap: 16px;
+}
+.sca-panel .form-intro {
+  margin-bottom: 0;
+}
+.sca-code {
+  letter-spacing: 0.16em;
+  font-variant-numeric: tabular-nums;
+}
+.sca-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .payment-aside {
   display: grid;
   gap: 20px;
@@ -1835,7 +1850,8 @@ strong {
   .form-footer > button {
     margin-left: auto;
   }
-  .review .form-footer > button {
+  .review .form-footer > button,
+  .sca-actions > button {
     margin: 0;
   }
   .payment-aside {

@@ -4,6 +4,10 @@ async function startPayment(page: Page, amount = '25.99') {
   await page.getByRole('button', { name: 'Make a payment', exact: true }).first().click();
   await page.getByLabel('Amount (GBP)').fill(amount);
 }
+async function verifyBiometric(page: Page) {
+  await page.getByRole('button', { name: 'Continue to verification' }).click();
+  await page.getByRole('button', { name: 'Confirm with demo biometric' }).click();
+}
 async function controls(page: Page, scenario: string) {
   await page.getByRole('button', { name: 'Demo controls' }).click();
   await page.getByLabel('Simulated payment outcome').selectOption(scenario);
@@ -25,7 +29,7 @@ test('overview renders cleanly and payment persists exactly once', async ({ page
   await page.getByLabel('Reference (optional)').fill('Friday essentials');
   await page.getByRole('button', { name: 'Review payment' }).click();
   await expect(page.getByText('Adyen (simulated)', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm £25.99 payment' }).click();
+  await verifyBiometric(page);
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
   await page.getByRole('button', { name: 'Back to overview' }).click();
   await expect(page.getByTestId('balance')).toHaveText('£12,454.51');
@@ -47,7 +51,7 @@ test('bank payment uses Worldpay and resets safely', async ({ page }) => {
   await page.getByRole('radio', { name: /Bank payment/ }).check();
   await page.getByRole('button', { name: 'Review payment' }).click();
   await expect(page.getByText('Worldpay (simulated)', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm £48.00 payment' }).click();
+  await verifyBiometric(page);
   await page.getByRole('button', { name: 'Back to overview' }).click();
   await expect(page.getByTestId('balance')).toHaveText('£12,432.50');
   await page.getByRole('button', { name: 'Demo controls' }).click();
@@ -66,10 +70,10 @@ for (const scenario of ['declined', 'unavailable'])
     await controls(page, scenario);
     await startPayment(page, '10.00');
     await page.getByRole('button', { name: 'Review payment' }).click();
-    await page.getByRole('button', { name: 'Confirm £10.00 payment' }).click();
+    await verifyBiometric(page);
     await expect(page.getByRole('alert')).toContainText('No money has left your account');
     await controls(page, 'success');
-    await page.getByRole('button', { name: 'Confirm £10.00 payment' }).click();
+    await page.getByRole('button', { name: 'Retry payment' }).click();
     await expect(
       page.getByRole('heading', { name: 'A little thing, taken care of.' }),
     ).toBeVisible();
@@ -109,7 +113,7 @@ test('corrupt or inaccessible storage recovers without blocking payments', async
   await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
   await startPayment(page, '15');
   await page.getByRole('button', { name: 'Review payment' }).click();
-  await page.getByRole('button', { name: 'Confirm £15.00 payment' }).click();
+  await verifyBiometric(page);
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
@@ -128,7 +132,7 @@ test('denied storage keeps app interactive', async ({ page }) => {
   ).toBeVisible();
   await startPayment(page, '5');
   await page.getByRole('button', { name: 'Review payment' }).click();
-  await page.getByRole('button', { name: 'Confirm £5.00 payment' }).click();
+  await verifyBiometric(page);
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
@@ -145,10 +149,31 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await startPayment(page, '12.50');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Review payment' }).click();
-  await page.getByRole('button', { name: 'Confirm £12.50 payment' }).click();
+  await page.getByRole('button', { name: 'Continue to verification' }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Confirm with demo biometric' }).click();
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
   await page.getByRole('button', { name: 'View receipt' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
+});
+
+test('in-app passcode fallback stays off SMS and keeps canary closed', async ({ page }) => {
+  await page.goto('/');
+  await startPayment(page, '18.00');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await page.getByRole('button', { name: 'Continue to verification' }).click();
+  await expect(page.getByText('will not send a text message')).toBeVisible();
+  await expect(page.getByRole('button', { name: /text me/i })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Use 6-digit passcode instead' }).click();
+  await page.getByLabel('6-digit app passcode').fill('000000');
+  await page.getByRole('button', { name: 'Verify passcode' }).click();
+  await expect(page.getByRole('alert')).toContainText('Text messages are not accepted');
+  await page.getByLabel('6-digit app passcode').fill('482913');
+  await page.getByRole('button', { name: 'Verify passcode' }).click();
+  await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
+  await expect(page.getByLabel('Rehearsal authentication record')).toContainText('In-app passcode');
+  await page.getByRole('button', { name: 'Demo controls' }).click();
+  await expect(page.getByText('Live canary authorization remains closed')).toBeVisible();
 });

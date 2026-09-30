@@ -31,3 +31,16 @@ export {
 
 export { STORAGE_KEY, loadState, saveState } from './storage';
 export type { LoadStateResult } from './storage';
+
+export type { DynamicLink, ScaAuditEvent, ScaFactor, ScaSignOff } from './sca';
+export {
+  BIOMETRIC_PROMPT_TEMPLATE,
+  DEMO_REHEARSAL_PASSCODE,
+  FALLBACK_COPY,
+  PASSCODE_FIELD_LABEL,
+  SCA_SIGNOFF,
+  acceptDeviceBiometric,
+  attemptPasscode,
+  biometricPromptCopy,
+  evaluateCanaryGate,
+} from './sca';
