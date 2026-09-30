@@ -21,11 +21,13 @@ import {
   ReceiptText,
   Search,
   Settings2,
+  Calculator,
   ShieldCheck,
   Sparkles,
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import RoiToolkit from './components/RoiToolkit';
 import {
   getProvider,
   money,
@@ -41,7 +43,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'ROI' | 'Connection';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -54,7 +56,43 @@ const nav = [
   { name: 'Payments', icon: ArrowUpRight },
   { name: 'Budgets', icon: PieChart },
   { name: 'Activity', icon: ReceiptText },
+  { name: 'ROI', icon: Calculator },
 ] as const;
+function pageIntro(page: Page): { eyebrow: string; title: string; lede: string } {
+  switch (page) {
+    case 'Overview':
+      return {
+        eyebrow: 'FRIDAY, 18 SEPTEMBER 2026',
+        title: 'Your everyday, balanced.',
+        lede: 'Good evening, Alex. Here’s where you stand today.',
+      };
+    case 'Payments':
+      return {
+        eyebrow: 'YOUR MONEY. YOUR WAY.',
+        title: 'A little closer. One payment away.',
+        lede: 'Pay with confidence. Keep your plans in view.',
+      };
+    case 'Budgets':
+      return {
+        eyebrow: 'YOUR MONEY. YOUR WAY.',
+        title: 'A plan for what matters.',
+        lede: 'Small intentions today. More possibilities tomorrow.',
+      };
+    case 'ROI':
+      return {
+        eyebrow: 'SALES PLANNING · NOT A CUSTOMER QUOTE',
+        title: 'Whiteboard displacement savings.',
+        lede: 'Confirm competitor seats, price per seat, and boards in discovery before anyone quotes a number.',
+      };
+    case 'Activity':
+    case 'Connection':
+      return {
+        eyebrow: 'YOUR MONEY. YOUR WAY.',
+        title: 'The story of your spending.',
+        lede: 'Every payment, in one clear picture.',
+      };
+  }
+}
 const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -413,29 +451,13 @@ export default function App() {
           </div>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">
-                {page === 'Overview' ? 'FRIDAY, 18 SEPTEMBER 2026' : 'YOUR MONEY. YOUR WAY.'}
-              </div>
+              <div className="eyebrow">{pageIntro(page).eyebrow}</div>
               <h1 ref={heading} tabIndex={-1}>
-                {page === 'Overview'
-                  ? 'Your everyday, balanced.'
-                  : page === 'Payments'
-                    ? 'A little closer. One payment away.'
-                    : page === 'Budgets'
-                      ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                {pageIntro(page).title}
               </h1>
-              <p>
-                {page === 'Overview'
-                  ? 'Good evening, Alex. Here’s where you stand today.'
-                  : page === 'Payments'
-                    ? 'Pay with confidence. Keep your plans in view.'
-                    : page === 'Budgets'
-                      ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
-              </p>
+              <p>{pageIntro(page).lede}</p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'ROI' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -910,6 +932,8 @@ export default function App() {
               </div>
             </>
           )}
+
+          {page === 'ROI' && <RoiToolkit />}
 
           {page === 'Activity' && (
             <section className="panel activity-panel">
