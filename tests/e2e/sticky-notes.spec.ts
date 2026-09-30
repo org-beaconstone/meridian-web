@@ -54,3 +54,47 @@ test('showcase is usable on mobile viewport', async ({ page }) => {
   // No horizontal overflow
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('yellow is the default selected colour', async ({ page }) => {
+  await page.goto('/');
+  // Yellow swatch should report aria-pressed=true by default
+  await expect(page.locator('[title="Yellow"]')).toHaveAttribute('aria-pressed', 'true');
+  // Every other swatch should not be pressed
+  for (const label of ['Coral', 'Mint', 'Sky', 'Lavender']) {
+    await expect(page.locator(`[title="${label}"]`)).toHaveAttribute('aria-pressed', 'false');
+  }
+});
+
+test('preview reflects typed note text in real time', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: 'Note' });
+  const preview = page.getByTestId('sticky-note-preview');
+  await input.fill('Real-time sync');
+  await expect(preview).toContainText('Real-time sync');
+});
+
+test('multiple notes can be added sequentially', async ({ page }) => {
+  await page.goto('/');
+  const canvas = page.locator('.sticky-note-canvas');
+  const initialCount = await canvas.locator('.sticky-note-card').count();
+
+  await page.getByRole('textbox', { name: 'Note' }).fill('First idea');
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await page.getByRole('textbox', { name: 'Note' }).fill('Second idea');
+  await page.getByRole('button', { name: 'Add note' }).click();
+
+  await expect(canvas.locator('.sticky-note-card')).toHaveCount(initialCount + 2);
+});
+
+test('pressing Enter in the text field submits the note', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByRole('textbox', { name: 'Note' });
+  const canvas = page.locator('.sticky-note-canvas');
+  const initialCount = await canvas.locator('.sticky-note-card').count();
+
+  await input.fill('Enter key shortcut');
+  await input.press('Enter');
+
+  await expect(canvas.locator('.sticky-note-card')).toHaveCount(initialCount + 1);
+  await expect(input).toHaveValue('');
+});
