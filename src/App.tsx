@@ -23,9 +23,11 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  StickyNote,
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import Whiteboard from './components/Whiteboard';
 import {
   getProvider,
   money,
@@ -41,7 +43,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection' | 'Whiteboard';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -54,6 +56,7 @@ const nav = [
   { name: 'Payments', icon: ArrowUpRight },
   { name: 'Budgets', icon: PieChart },
   { name: 'Activity', icon: ReceiptText },
+  { name: 'Whiteboard', icon: StickyNote },
 ] as const;
 const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
@@ -423,7 +426,9 @@ export default function App() {
                     ? 'A little closer. One payment away.'
                     : page === 'Budgets'
                       ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                      : page === 'Whiteboard'
+                        ? 'Your ideas, pinned in one place.'
+                        : 'The story of your spending.'}
               </h1>
               <p>
                 {page === 'Overview'
@@ -432,7 +437,9 @@ export default function App() {
                     ? 'Pay with confidence. Keep your plans in view.'
                     : page === 'Budgets'
                       ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
+                      : page === 'Whiteboard'
+                        ? 'Capture thoughts and colour-code what matters most.'
+                        : 'Every payment, in one clear picture.'}
               </p>
             </div>
             {page !== 'Payments' && (
@@ -959,6 +966,7 @@ export default function App() {
               <Transactions transactions={filtered} onSelect={setReceipt} />
             </section>
           )}
+          {page === 'Whiteboard' && <Whiteboard />}
           <footer className="page-footer">
             <span>
               <img src="./meridian.svg" alt="" />A clearer kind of banking.
