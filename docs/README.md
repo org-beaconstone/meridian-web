@@ -10,4 +10,4 @@ The existing [Confluence and Google documents](https://github.com/org-beaconston
 - [Brand / ADS](brand-design-system.md): navy/gold identity, existing components and accessibility.
 - [Standalone rehearsal](demo-runbook.md), [connected mode](../INTEGRATION.md), [Kaizen hosting](deployment.md).
 
-Current provider baseline remains Adyen and Worldpay only. The next European integration is deliberately absent. Native configuration remains hardcoded to those two providers.
+Current provider baseline remains Adyen and Worldpay only. Euro transfers reuse that bank simulation; no third provider is named or configured.

@@ -30,7 +30,7 @@ For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p
 
 ## Planner handoff
 
-There are exactly two providers. A new European payment experience is intentionally absent, including hidden code or a pre-selected vendor. Frame the next task around evaluating local payment coverage, choosing a suitable provider against [the playbook](provider-expansion-playbook.md), and changing this payment screen.
+There are exactly two providers. Euro area transfers collect a fictional IBAN, validate it locally, and review a fixed sterling quote before debiting through the existing Worldpay bank simulation. Choosing another provider is still a later exercise against [the playbook](provider-expansion-playbook.md).
 
 Use [company strategy](company-strategy.md), [compliance policy](compliance-policy.md), [API standards](api-standards.md) and [workspace map](workspace-map.md) as fictional planning context. They are repository documents, not published Confluence pages or existing Jira work items.
 

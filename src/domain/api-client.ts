@@ -1,4 +1,4 @@
-import type { BankState, Category, Scenario, Transaction } from './model';
+import type { BankState, Category, PaymentRequestPayload, Scenario, Transaction } from './model';
 import { BankStateSchema } from './storage';
 export class ApiFailure extends Error {
   constructor(
@@ -76,13 +76,22 @@ export class ApiClient {
     note: string,
     scenario: Scenario,
     key: string,
+    payload?: PaymentRequestPayload,
   ): Promise<PaymentReply> {
-    const result = await this.request(
-      'POST',
-      '/payments',
-      { recipientId, amountMinor, method, note, scenario },
-      { 'Idempotency-Key': key },
-    );
+    // UK and US keep the original JSON body. Euro transfers also carry the
+    // client idempotency key and IBAN quote on the payload itself.
+    const body: Record<string, unknown> = { recipientId, amountMinor, method, note, scenario };
+    if (payload?.corridor === 'eur-sepa') {
+      body.idempotencyKey = payload.idempotencyKey;
+      body.corridor = payload.corridor;
+      body.iban = payload.iban;
+      body.recipientName = payload.recipientName;
+      body.settlementAmount = payload.amountMinor;
+      body.settlementCurrency = payload.currency;
+      body.feeMinor = payload.feeMinor;
+      body.exchangeRate = payload.exchangeRate;
+    }
+    const result = await this.request('POST', '/payments', body, { 'Idempotency-Key': key });
     if (result.ok !== true)
       return {
         ok: false,

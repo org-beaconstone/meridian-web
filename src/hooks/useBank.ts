@@ -3,8 +3,8 @@ import { ApiClient, ApiFailure, getApiBaseUrl, isConnectedMode } from '../domain
 import { loadState, saveState } from '../domain/storage';
 import {
   createInitialState,
+  createPaymentPayload,
   executePayment,
-  parseAmount,
   updateBudget as editBudget,
   DEMO_DATE,
   type BankState,
@@ -129,10 +129,19 @@ export function useBank() {
         }
         return result;
       }
-      const [amount, error] = parseAmount(draft.amount);
-      if (amount === null) return { ok: false, error: error || 'Invalid amount' };
+      const prepared = createPaymentPayload(stateRef.current, draft, key);
+      if (!prepared.ok) return { ok: false, error: prepared.errors[0] || 'Invalid payment' };
+      const { payload } = prepared;
       const result = await mutation((api) =>
-        api.submitPayment(draft.recipientId, amount, draft.method, draft.note, scenario, key),
+        api.submitPayment(
+          payload.recipientId,
+          payload.debitMinor,
+          payload.method,
+          payload.note,
+          scenario,
+          key,
+          payload.corridor === 'eur-sepa' ? payload : undefined,
+        ),
       );
       if (result.ok) apply(result.state);
       return result;

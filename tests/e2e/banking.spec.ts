@@ -132,6 +132,47 @@ test('denied storage keeps app interactive', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
+test('euro transfer validates the IBAN and reviews the quote once', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Make a payment', exact: true }).first().click();
+  await page.getByLabel('Transfer type').selectOption('eur-sepa');
+  await page.getByLabel('Recipient name').fill('Ada Berger');
+  await page.getByLabel('Recipient IBAN').fill('DE89 3704 0044 0532 0130 01');
+  await expect(page.getByTestId('iban-status')).toContainText('IBAN check digits are invalid');
+  await page.getByLabel('Recipient IBAN').fill('DE89 3704 0044 0532 0130 00');
+  await expect(page.getByTestId('iban-status')).toContainText('IBAN verified · Germany');
+  await page.getByLabel('Amount (EUR)').fill('25.00');
+  await page.getByLabel('Reference (optional)').fill('Studio invoice');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByText('DE89 3704 0044 0532 0130 00')).toBeVisible();
+  await expect(page.getByText('€25.00 × 0.8600 = £21.50')).toBeVisible();
+  await expect(page.locator('.detail-list')).toContainText('€0.00');
+  await expect(page.getByText('Monday 21 September 2026')).toBeVisible();
+  await expect(page.getByText('Worldpay (simulated)', { exact: true })).toBeVisible();
+  const key = await page.getByTestId('idempotency-key').innerText();
+  expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  const pay = page.getByRole('button', { name: 'Pay €25.00' });
+  await expect(pay).toBeEnabled();
+  await pay.click();
+  await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,459.00');
+});
+
+test('US domestic transfer still confirms in sterling', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Make a payment', exact: true }).first().click();
+  await page.getByLabel('Transfer type').selectOption('us-domestic');
+  await page.getByLabel('Amount (GBP)').fill('10.00');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByText('US domestic transfer', { exact: true })).toBeVisible();
+  await expect(page.getByText('1–3 business days', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm £10.00 payment' }).click();
+  await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,470.50');
+});
+
 test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');

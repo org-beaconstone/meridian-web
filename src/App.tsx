@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  CircleAlert,
   CreditCard,
   Globe2,
   Landmark,
@@ -27,17 +28,24 @@ import {
 } from 'lucide-react';
 import Dialog from './components/Dialog';
 import {
+  corridorOf,
+  createPaymentPayload,
+  DEMO_EUR_GBP_RATE,
+  eurTransferQuote,
+  formatIban,
   getProvider,
+  isUuidV4,
   money,
   monthlySpent,
   parseAmount,
   RECIPIENTS,
-  validatePayment,
+  validateIban,
   type Budget,
   type Category,
   type PaymentDraft,
   type Scenario,
   type Transaction,
+  type TransferCorridor,
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
@@ -66,6 +74,9 @@ const blankDraft = (): PaymentDraft => ({
   amount: '',
   method: 'card',
   note: '',
+  corridor: 'uk-faster-payments',
+  recipientName: '',
+  iban: '',
 });
 
 function Avatar({ name, category }: { name: string; category: Category }) {
@@ -163,6 +174,8 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
+  const [paying, setPaying] = useState(false);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -181,8 +194,17 @@ export default function App() {
   const budgetTotal = state.budgets.reduce((sum, budget) => sum + budget.limit, 0);
   const remaining = budgetTotal - spent;
   const recipient = RECIPIENTS.find((item) => item.id === draft.recipientId)!;
-  const provider = getProvider(draft.method);
-  const amount = parseAmount(draft.amount)[0] ?? 0;
+  const corridor = corridorOf(draft);
+  const provider = getProvider(corridor === 'eur-sepa' ? 'bank' : draft.method);
+  const amount = parseAmount(draft.amount, corridor === 'eur-sepa' ? 'EUR' : 'GBP')[0] ?? 0;
+  const eurQuote = corridor === 'eur-sepa' && amount > 0 ? eurTransferQuote(amount) : null;
+  const debitPence = eurQuote?.gbpPence ?? (corridor === 'eur-sepa' ? 0 : amount);
+  const impactCategory: Category = corridor === 'eur-sepa' ? 'Bills' : recipient.category;
+  const ibanCheck = validateIban(draft.iban ?? '');
+  const reviewPayload =
+    step === 'review' && idempotencyKey ? createPaymentPayload(state, draft, idempotencyKey) : null;
+  const blockingReviewErrors =
+    step === 'review' && reviewPayload && !reviewPayload.ok ? reviewPayload.errors : [];
   const transactions = [...state.transactions]
     .reverse()
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -203,13 +225,45 @@ export default function App() {
     setStep('details');
     setErrors([]);
     setLastPayment(null);
+    setIdempotencyKey('');
+    setPaying(false);
     paymentId.current = crypto.randomUUID();
     confirming.current = false;
     navigate('Payments');
   }
+  function chooseCorridor(next: TransferCorridor) {
+    setDraft({
+      ...draft,
+      corridor: next,
+      method: next === 'eur-sepa' ? 'bank' : draft.corridor === 'eur-sepa' ? 'card' : draft.method,
+    });
+    setErrors([]);
+  }
+  function reviewPayment() {
+    const key = crypto.randomUUID();
+    if (!isUuidV4(key)) {
+      setErrors(['Could not create an idempotency key']);
+      return;
+    }
+    const prepared = createPaymentPayload(state, draft, key);
+    if (!prepared.ok) {
+      setErrors(prepared.errors);
+      return;
+    }
+    paymentId.current = key;
+    setIdempotencyKey(key);
+    setErrors([]);
+    setPaying(false);
+    confirming.current = false;
+    setStep('review');
+  }
   async function confirmPayment() {
-    if (confirming.current) return;
+    if (confirming.current || paying) return;
     confirming.current = true;
+    setPaying(true);
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => resolve(undefined));
+    });
 
     const result = await apiSubmitPayment(draft, scenario, paymentId.current);
 
@@ -220,9 +274,11 @@ export default function App() {
     } else if (result.code === 'PAYMENT_PENDING') {
       setErrors([result.error || 'Payment pending']);
       confirming.current = false;
+      setPaying(false);
     } else {
       setErrors([result.error || 'Payment failed']);
       confirming.current = false;
+      setPaying(false);
     }
   }
   function openBudget(budget: Budget) {
@@ -238,6 +294,10 @@ export default function App() {
       setScenario('success');
       setErrors([]);
       setLastPayment(null);
+      setIdempotencyKey('');
+      setPaying(false);
+      paymentId.current = crypto.randomUUID();
+      confirming.current = false;
       setQuery('');
       setFilter('all');
       setDialog(null);
@@ -604,14 +664,14 @@ export default function App() {
                     </li>
                   ))}
                 </ol>
-                {errors.length > 0 && (
+                {(errors.length > 0 || blockingReviewErrors.length > 0) && (
                   <div role="alert" className="message">
                     <SectionMessage
                       appearance="error"
                       title={step === 'review' ? 'Payment not completed' : 'Check your payment'}
                     >
                       <p>
-                        {errors.join('. ')}
+                        {[...errors, ...blockingReviewErrors].join('. ')}
                         {step === 'review' && connectionMode === 'standalone'
                           ? '. No money has left your account. You can go back or change the demo scenario and retry.'
                           : ''}
@@ -623,60 +683,110 @@ export default function App() {
                   <form
                     onSubmit={(event) => {
                       event.preventDefault();
-                      const nextErrors = validatePayment(state, draft);
-                      setErrors(nextErrors);
-                      if (!nextErrors.length) setStep('review');
+                      reviewPayment();
                     }}
                     noValidate
                   >
                     <div className="form-intro">
-                      <h2>Who are we paying?</h2>
-                      <p>Choose a saved recipient to get started.</p>
+                      <h2>
+                        {corridor === 'eur-sepa' ? 'Who is receiving euros?' : 'Who are we paying?'}
+                      </h2>
+                      <p>
+                        {corridor === 'eur-sepa'
+                          ? 'Enter a fictional recipient and IBAN. The checksum is checked on this device.'
+                          : 'Choose a saved recipient to get started.'}
+                      </p>
                     </div>
-                    <label className="field-label" htmlFor="recipient">
-                      Recipient
+                    <label className="field-label" htmlFor="transfer-type">
+                      Transfer type
                     </label>
                     <select
-                      id="recipient"
-                      value={draft.recipientId}
-                      onChange={(event) => setDraft({ ...draft, recipientId: event.target.value })}
+                      id="transfer-type"
+                      value={corridor}
+                      onChange={(event) => chooseCorridor(event.target.value as TransferCorridor)}
                     >
-                      {RECIPIENTS.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
+                      <option value="uk-faster-payments">United Kingdom (Faster Payments)</option>
+                      <option value="us-domestic">United States (domestic)</option>
+                      <option value="eur-sepa">Euro area (IBAN)</option>
                     </select>
-                    <div className="recipient-detail">
-                      <Avatar name={recipient.name} category={recipient.category} />
-                      <div>
-                        <strong>{recipient.name}</strong>
-                        <span>{recipient.detail}</span>
-                      </div>
-                      <Lozenge appearance="success">Saved recipient</Lozenge>
-                    </div>
-                    <div className="field-row">
-                      <div>
-                        <label className="field-label" htmlFor="amount">
-                          Amount (GBP)
+                    {corridor === 'eur-sepa' ? (
+                      <>
+                        <div className="field-row eur-fields">
+                          <div>
+                            <label className="field-label" htmlFor="eur-recipient-name">
+                              Recipient name
+                            </label>
+                            <Textfield
+                              id="eur-recipient-name"
+                              value={draft.recipientName ?? ''}
+                              maxLength={70}
+                              placeholder="Ada Berger"
+                              onChange={(event) =>
+                                setDraft({ ...draft, recipientName: event.currentTarget.value })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="field-label" htmlFor="amount">
+                              Amount (EUR)
+                            </label>
+                            <Textfield
+                              id="amount"
+                              name="amount"
+                              value={draft.amount}
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              maxLength={12}
+                              onChange={(event) =>
+                                setDraft({ ...draft, amount: event.currentTarget.value })
+                              }
+                              aria-describedby="amount-help"
+                            />
+                            <small id="amount-help">
+                              Available: {money(state.balance)}. Maximum €10,000 at the demo rate.
+                            </small>
+                          </div>
+                        </div>
+                        <label className="field-label" htmlFor="iban">
+                          Recipient IBAN
                         </label>
                         <Textfield
-                          id="amount"
-                          name="amount"
-                          value={draft.amount}
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          maxLength={12}
+                          id="iban"
+                          value={draft.iban ?? ''}
+                          maxLength={42}
+                          placeholder="DE89 3704 0044 0532 0130 00"
+                          autoComplete="off"
+                          spellCheck={false}
+                          isInvalid={ibanCheck.status === 'invalid'}
+                          aria-invalid={ibanCheck.status === 'invalid'}
+                          aria-describedby="iban-help iban-feedback"
                           onChange={(event) =>
-                            setDraft({ ...draft, amount: event.currentTarget.value })
+                            setDraft({ ...draft, iban: event.currentTarget.value })
                           }
-                          aria-describedby="amount-help"
                         />
-                        <small id="amount-help">
-                          Available: {money(state.balance)}. Maximum £10,000.
+                        <small id="iban-help">
+                          Fictional demo only. Country code and MOD-97 checksum are checked as you
+                          type. Don’t enter a real IBAN.
                         </small>
-                      </div>
-                      <div>
+                        <p
+                          id="iban-feedback"
+                          data-testid="iban-status"
+                          role="status"
+                          className={`iban-feedback ${ibanCheck.status === 'valid' ? 'valid' : ''} ${ibanCheck.status === 'invalid' ? 'invalid' : ''}`}
+                        >
+                          {ibanCheck.status === 'valid' && (
+                            <>
+                              <Check size={16} aria-hidden="true" />
+                              IBAN verified · {ibanCheck.countryName}
+                            </>
+                          )}
+                          {ibanCheck.status === 'invalid' && (
+                            <>
+                              <CircleAlert size={16} aria-hidden="true" />
+                              {ibanCheck.message}
+                            </>
+                          )}
+                        </p>
                         <label className="field-label" htmlFor="note">
                           Reference <span className="muted">(optional)</span>
                         </label>
@@ -689,46 +799,125 @@ export default function App() {
                             setDraft({ ...draft, note: event.currentTarget.value })
                           }
                         />
-                      </div>
-                    </div>
-                    <fieldset className="method-fieldset">
-                      <legend>How would you like to pay?</legend>
-                      <p>Two familiar ways. One simple payment.</p>
-                      <label className={`method-card ${draft.method === 'card' ? 'selected' : ''}`}>
-                        <input
-                          type="radio"
-                          name="method"
-                          value="card"
-                          checked={draft.method === 'card'}
-                          onChange={() => setDraft({ ...draft, method: 'card' })}
-                        />
-                        <span className="method-icon">
-                          <CreditCard size={22} />
-                        </span>
-                        <span className="method-copy">
-                          <strong>Debit card</strong>
-                          <span>Meridian Visa •••• 4829</span>
-                        </span>
-                        <span className="provider-wordmark">adyen</span>
-                      </label>
-                      <label className={`method-card ${draft.method === 'bank' ? 'selected' : ''}`}>
-                        <input
-                          type="radio"
-                          name="method"
-                          value="bank"
-                          checked={draft.method === 'bank'}
-                          onChange={() => setDraft({ ...draft, method: 'bank' })}
-                        />
-                        <span className="method-icon">
-                          <Landmark size={22} />
-                        </span>
-                        <span className="method-copy">
-                          <strong>Bank payment</strong>
-                          <span>Your everyday account •• 2048</span>
-                        </span>
-                        <span className="provider-wordmark worldpay">Worldpay</span>
-                      </label>
-                    </fieldset>
+                        <p className="muted eur-rail-note">
+                          Euro transfers use the existing Worldpay bank simulation. No additional
+                          provider is involved.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <label className="field-label" htmlFor="recipient">
+                          Recipient
+                        </label>
+                        <select
+                          id="recipient"
+                          value={draft.recipientId}
+                          onChange={(event) =>
+                            setDraft({ ...draft, recipientId: event.target.value })
+                          }
+                        >
+                          {RECIPIENTS.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="recipient-detail">
+                          <Avatar name={recipient.name} category={recipient.category} />
+                          <div>
+                            <strong>{recipient.name}</strong>
+                            <span>{recipient.detail}</span>
+                          </div>
+                          <Lozenge appearance="success">Saved recipient</Lozenge>
+                        </div>
+                        <div className="field-row">
+                          <div>
+                            <label className="field-label" htmlFor="amount">
+                              Amount (GBP)
+                            </label>
+                            <Textfield
+                              id="amount"
+                              name="amount"
+                              value={draft.amount}
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              maxLength={12}
+                              onChange={(event) =>
+                                setDraft({ ...draft, amount: event.currentTarget.value })
+                              }
+                              aria-describedby="amount-help"
+                            />
+                            <small id="amount-help">
+                              Available: {money(state.balance)}. Maximum £10,000.
+                            </small>
+                          </div>
+                          <div>
+                            <label className="field-label" htmlFor="note">
+                              Reference <span className="muted">(optional)</span>
+                            </label>
+                            <Textfield
+                              id="note"
+                              value={draft.note}
+                              maxLength={200}
+                              placeholder="What’s it for?"
+                              onChange={(event) =>
+                                setDraft({ ...draft, note: event.currentTarget.value })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <fieldset className="method-fieldset">
+                          <legend>How would you like to pay?</legend>
+                          <p>
+                            {corridor === 'us-domestic'
+                              ? 'Same everyday account. A US domestic transfer still uses the saved recipient.'
+                              : 'Two familiar ways. One simple payment.'}
+                          </p>
+                          <label
+                            className={`method-card ${draft.method === 'card' ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name="method"
+                              value="card"
+                              checked={draft.method === 'card'}
+                              onChange={() => setDraft({ ...draft, method: 'card' })}
+                            />
+                            <span className="method-icon">
+                              <CreditCard size={22} />
+                            </span>
+                            <span className="method-copy">
+                              <strong>Debit card</strong>
+                              <span>Meridian Visa •••• 4829</span>
+                            </span>
+                            <span className="provider-wordmark">adyen</span>
+                          </label>
+                          <label
+                            className={`method-card ${draft.method === 'bank' ? 'selected' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name="method"
+                              value="bank"
+                              checked={draft.method === 'bank'}
+                              onChange={() => setDraft({ ...draft, method: 'bank' })}
+                            />
+                            <span className="method-icon">
+                              <Landmark size={22} />
+                            </span>
+                            <span className="method-copy">
+                              <strong>Bank payment</strong>
+                              <span>
+                                {corridor === 'us-domestic'
+                                  ? 'US domestic · everyday account •• 2048'
+                                  : 'Faster Payments · everyday account •• 2048'}
+                              </span>
+                            </span>
+                            <span className="provider-wordmark worldpay">Worldpay</span>
+                          </label>
+                        </fieldset>
+                      </>
+                    )}
                     <div className="form-footer">
                       <span>
                         <LockKeyhole size={14} />
@@ -740,22 +929,65 @@ export default function App() {
                     </div>
                   </form>
                 )}
-                {step === 'review' && (
+                {step === 'review' && reviewPayload?.ok && (
                   <div className="review">
                     <div className="form-intro">
                       <h2>One last look.</h2>
                       <p>Check everything below before confirming your demo payment.</p>
                     </div>
                     <div className="review-recipient">
-                      <Avatar name={recipient.name} category={recipient.category} />
-                      <span>Sending to {recipient.name}</span>
-                      <strong>{money(amount)}</strong>
+                      <Avatar
+                        name={reviewPayload.payload.recipientName}
+                        category={impactCategory}
+                      />
+                      <span>Sending to {reviewPayload.payload.recipientName}</span>
+                      <strong>
+                        {reviewPayload.payload.currency === 'EUR'
+                          ? money(reviewPayload.payload.amountMinor, 'EUR')
+                          : money(reviewPayload.payload.debitMinor)}
+                      </strong>
                     </div>
                     <dl className="detail-list">
+                      {reviewPayload.payload.corridor === 'eur-sepa' && (
+                        <>
+                          <div>
+                            <dt>Recipient IBAN</dt>
+                            <dd>{formatIban(reviewPayload.payload.iban ?? '')}</dd>
+                          </div>
+                          <div>
+                            <dt>EUR amount</dt>
+                            <dd>{money(reviewPayload.payload.amountMinor, 'EUR')}</dd>
+                          </div>
+                          <div>
+                            <dt>Exchange rate</dt>
+                            <dd>
+                              {reviewPayload.payload.exchangeRate}
+                              <span className="muted">
+                                {' '}
+                                · {reviewPayload.payload.exchangeBreakdown}
+                              </span>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Sterling debit</dt>
+                            <dd>{money(reviewPayload.payload.debitMinor)}</dd>
+                          </div>
+                        </>
+                      )}
+                      <div>
+                        <dt>Transfer</dt>
+                        <dd>
+                          {reviewPayload.payload.corridor === 'eur-sepa'
+                            ? 'Euro area transfer'
+                            : reviewPayload.payload.corridor === 'us-domestic'
+                              ? 'US domestic transfer'
+                              : 'UK Faster Payments'}
+                        </dd>
+                      </div>
                       <div>
                         <dt>Payment method</dt>
                         <dd>
-                          {draft.method === 'card'
+                          {reviewPayload.payload.method === 'card'
                             ? 'Debit card •••• 4829'
                             : 'Bank payment •• 2048'}
                         </dd>
@@ -771,14 +1003,25 @@ export default function App() {
                         <dd>{draft.note || 'No reference'}</dd>
                       </div>
                       <div>
-                        <dt>Fee</dt>
+                        <dt>Transfer fee</dt>
                         <dd>
-                          £0.00 <span className="muted">in this demo</span>
+                          {money(reviewPayload.payload.feeMinor, reviewPayload.payload.feeCurrency)}{' '}
+                          <span className="muted">in this demo</span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Estimated clearing</dt>
+                        <dd>{reviewPayload.payload.estimatedClearing}</dd>
+                      </div>
+                      <div>
+                        <dt>Idempotency key</dt>
+                        <dd data-testid="idempotency-key">
+                          {reviewPayload.payload.idempotencyKey}
                         </dd>
                       </div>
                       <div>
                         <dt>Balance after payment</dt>
-                        <dd>{money(state.balance - amount)}</dd>
+                        <dd>{money(state.balance - reviewPayload.payload.debitMinor)}</dd>
                       </div>
                     </dl>
                     <div className="form-footer">
@@ -786,7 +1029,10 @@ export default function App() {
                         onClick={() => {
                           setStep('details');
                           setErrors([]);
+                          setPaying(false);
+                          confirming.current = false;
                         }}
+                        isDisabled={paying}
                       >
                         Back to details
                       </Button>
@@ -794,11 +1040,14 @@ export default function App() {
                         appearance="primary"
                         onClick={confirmPayment}
                         isDisabled={
+                          paying ||
                           busy ||
                           (connectionMode === 'connected' && connectionStatus !== 'connected')
                         }
                       >
-                        Confirm {money(amount)} payment
+                        {reviewPayload.payload.currency === 'EUR'
+                          ? `Pay ${money(reviewPayload.payload.amountMinor, 'EUR')}`
+                          : `Confirm ${money(reviewPayload.payload.debitMinor)} payment`}
                       </Button>
                     </div>
                   </div>
@@ -811,7 +1060,17 @@ export default function App() {
                     <Lozenge appearance="success">Demo payment complete</Lozenge>
                     <h2>A little thing, taken care of.</h2>
                     <p>
-                      {money(lastPayment.amount)} sent to <strong>{lastPayment.name}</strong>.
+                      {lastPayment.settlementCurrency === 'EUR' && lastPayment.settlementAmount ? (
+                        <>
+                          {money(lastPayment.settlementAmount, 'EUR')} sent to{' '}
+                          <strong>{lastPayment.name}</strong>. {money(lastPayment.amount)} left your
+                          everyday account.
+                        </>
+                      ) : (
+                        <>
+                          {money(lastPayment.amount)} sent to <strong>{lastPayment.name}</strong>.
+                        </>
+                      )}
                     </p>
                     <div className="receipt-chip">
                       <span>Payment reference</span>
@@ -854,10 +1113,10 @@ export default function App() {
                     <h3>Your plan stays in view</h3>
                     <PieChart size={18} />
                   </div>
-                  <p>{recipient.category} this month</p>
+                  <p>{impactCategory} this month</p>
                   <strong>
                     {money(
-                      monthlySpent(state, recipient.category) + (step === 'done' ? 0 : amount),
+                      monthlySpent(state, impactCategory) + (step === 'done' ? 0 : debitPence),
                     )}
                   </strong>
                   <span>{step === 'done' ? 'including this payment' : 'after this payment'}</span>
@@ -973,7 +1232,11 @@ export default function App() {
           <div className="receipt-heading">
             <ArrowDownLeft size={24} />
             <h3>{receipt.name}</h3>
-            <strong>{money(receipt.amount)}</strong>
+            <strong>
+              {receipt.settlementCurrency === 'EUR' && receipt.settlementAmount
+                ? money(receipt.settlementAmount, 'EUR')
+                : money(receipt.amount)}
+            </strong>
             <Lozenge appearance={receipt.status === 'completed' ? 'success' : 'removed'}>
               {receipt.status}
             </Lozenge>
@@ -991,9 +1254,31 @@ export default function App() {
               <dt>Category</dt>
               <dd>{receipt.category}</dd>
             </div>
+            {receipt.iban && (
+              <div>
+                <dt>IBAN</dt>
+                <dd>{formatIban(receipt.iban)}</dd>
+              </div>
+            )}
+            {receipt.settlementCurrency === 'EUR' && (
+              <div>
+                <dt>Debited</dt>
+                <dd>
+                  {money(receipt.amount)} · {DEMO_EUR_GBP_RATE.label}
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Method</dt>
-              <dd>{receipt.method === 'card' ? 'Debit card' : 'Bank payment'}</dd>
+              <dd>
+                {receipt.corridor === 'eur-sepa'
+                  ? 'Euro transfer'
+                  : receipt.corridor === 'us-domestic'
+                    ? 'US domestic transfer'
+                    : receipt.method === 'card'
+                      ? 'Debit card'
+                      : 'Bank payment'}
+              </dd>
             </div>
             <div>
               <dt>Provider</dt>
@@ -1236,6 +1521,8 @@ export default function App() {
                     setStep('details');
                     setErrors([]);
                     setLastPayment(null);
+                    setIdempotencyKey('');
+                    setPaying(false);
                     setReceipt(null);
                     setBudgetEdit(null);
                     paymentId.current = crypto.randomUUID();

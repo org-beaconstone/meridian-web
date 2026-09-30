@@ -974,12 +974,37 @@ strong {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
-.field-row small {
+.field-row small,
+.payment-panel small {
   display: block;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.7;
   margin-top: 7px;
+}
+.payment-panel select {
+  margin-bottom: 22px;
+}
+.eur-fields {
+  margin-top: 4px;
+}
+.iban-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  margin: 8px 0 18px;
+  font-size: 12px;
+}
+.iban-feedback.valid {
+  color: var(--ds-text-success, #216e4e);
+}
+.iban-feedback.invalid {
+  color: var(--ds-text-danger, #ae2a19);
+}
+.eur-rail-note {
+  margin-top: 16px;
+  font-size: 12px;
 }
 .method-fieldset {
   border: 0;

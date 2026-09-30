@@ -72,4 +72,30 @@ describe('boundary and invariant regressions', () => {
     expect(loadState().warning).toBeTruthy();
     expect(loadState().state).toEqual(createInitialState());
   });
+  it('persists a euro transfer and reloads the same sterling debit', () => {
+    const paid = executePayment(
+      createInitialState(),
+      {
+        ...draft,
+        corridor: 'eur-sepa',
+        recipientName: 'Ada Berger',
+        iban: 'DE89370400440532013000',
+        amount: '25.00',
+        method: 'bank',
+      },
+      'success',
+      'eur-saved',
+      '2026-09-18',
+    );
+    if (!paid.ok) throw new Error(paid.error);
+    const storage = new Map([[STORAGE_KEY, JSON.stringify(paid.state)]]);
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    expect(saveState(paid.state)).toBe(true);
+    expect(loadState().warning).toBeNull();
+    expect(loadState().state.balance).toBe(paid.state.balance);
+    expect(loadState().state.transactions.at(-1)?.iban).toBe('DE89370400440532013000');
+  });
 });

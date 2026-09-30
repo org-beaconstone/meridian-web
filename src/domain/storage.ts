@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import type { BankState } from './model';
-import { createInitialState, getProvider, isCalendarDate, RECIPIENTS } from './model';
+import {
+  createInitialState,
+  eurCentsToGbpPence,
+  getProvider,
+  isCalendarDate,
+  RECIPIENTS,
+} from './model';
+import { validateIban } from './iban';
 
 export const STORAGE_KEY = 'meridian_bank_state';
 const CategorySchema = z.enum(['Shopping', 'Food & drink', 'Transport', 'Bills', 'Lifestyle']);
@@ -18,15 +25,32 @@ const TransactionSchema = z
     method: z.enum(['card', 'bank']),
     status: z.enum(['completed', 'declined']),
     note: z.string().max(200),
+    corridor: z.enum(['uk-faster-payments', 'us-domestic', 'eur-sepa']).optional(),
+    iban: z.string().optional(),
+    settlementAmount: z.number().int().safe().positive().max(1000000).optional(),
+    settlementCurrency: z.literal('EUR').optional(),
   })
   .strict()
   .refine((transaction) => {
+    if (getProvider(transaction.method).id !== transaction.provider) return false;
+    if (transaction.corridor === 'eur-sepa') {
+      const iban = transaction.iban ? validateIban(transaction.iban) : { status: 'empty' as const };
+      return (
+        transaction.method === 'bank' &&
+        transaction.category === 'Bills' &&
+        iban.status === 'valid' &&
+        iban.iban === transaction.iban &&
+        transaction.settlementCurrency === 'EUR' &&
+        transaction.settlementAmount !== undefined &&
+        transaction.amount === eurCentsToGbpPence(transaction.settlementAmount) &&
+        transaction.recipientId === `eur-${transaction.iban}` &&
+        transaction.name.trim().length >= 2
+      );
+    }
+    if (transaction.iban || transaction.settlementAmount || transaction.settlementCurrency)
+      return false;
     const recipient = RECIPIENTS.find((item) => item.id === transaction.recipientId);
-    return (
-      recipient?.name === transaction.name &&
-      recipient.category === transaction.category &&
-      getProvider(transaction.method).id === transaction.provider
-    );
+    return recipient?.name === transaction.name && recipient.category === transaction.category;
   }, 'Inconsistent recipient or provider');
 const BudgetSchema = z
   .object({ category: CategorySchema, limit: MinorUnits.positive().max(1000000) })
