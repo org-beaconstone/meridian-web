@@ -26,6 +26,12 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import { EuropeanPlans } from './components/EuropeanPlans';
+import {
+  loadEuropeanPlans,
+  saveEuropeanPlans,
+  type EuropeanPaymentPlan,
+} from './domain/european-plans';
 import {
   getProvider,
   money,
@@ -163,6 +169,9 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [planStore] = useState(loadEuropeanPlans);
+  const [plans, setPlans] = useState<EuropeanPaymentPlan[]>(planStore.plans);
+  const [planStorageWarning, setPlanStorageWarning] = useState<string | null>(planStore.warning);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -230,9 +239,20 @@ export default function App() {
     setBudgetAmount((budget.limit / 100).toFixed(2));
     setBudgetError('');
   }
+  function updatePlans(next: EuropeanPaymentPlan[]) {
+    setPlans(next);
+    if (!saveEuropeanPlans(next)) {
+      setPlanStorageWarning(
+        'European plans are kept for this visit only. Browser storage is unavailable.',
+      );
+    } else {
+      setPlanStorageWarning(null);
+    }
+  }
   async function reset() {
     const result = await apiReset();
     if (result.ok) {
+      updatePlans([]);
       setDraft(blankDraft());
       setStep('details');
       setScenario('success');
@@ -580,294 +600,308 @@ export default function App() {
           )}
 
           {page === 'Payments' && (
-            <div className="payment-layout">
-              <section className="panel payment-panel">
-                <ol className="stepper" aria-label="Payment progress">
-                  {['Payment details', 'Review', 'Complete'].map((label, index) => (
-                    <li
-                      key={label}
-                      className={
-                        index <= ['details', 'review', 'done'].indexOf(step) ? 'reached' : ''
-                      }
-                      aria-current={
-                        index === ['details', 'review', 'done'].indexOf(step) ? 'step' : undefined
-                      }
-                    >
-                      <span>
-                        {index < ['details', 'review', 'done'].indexOf(step) ? (
-                          <Check size={13} />
-                        ) : (
-                          index + 1
-                        )}
-                      </span>
-                      {label}
-                    </li>
-                  ))}
-                </ol>
-                {errors.length > 0 && (
-                  <div role="alert" className="message">
-                    <SectionMessage
-                      appearance="error"
-                      title={step === 'review' ? 'Payment not completed' : 'Check your payment'}
-                    >
-                      <p>
-                        {errors.join('. ')}
-                        {step === 'review' && connectionMode === 'standalone'
-                          ? '. No money has left your account. You can go back or change the demo scenario and retry.'
-                          : ''}
-                      </p>
-                    </SectionMessage>
-                  </div>
-                )}
-                {step === 'details' && (
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const nextErrors = validatePayment(state, draft);
-                      setErrors(nextErrors);
-                      if (!nextErrors.length) setStep('review');
-                    }}
-                    noValidate
-                  >
-                    <div className="form-intro">
-                      <h2>Who are we paying?</h2>
-                      <p>Choose a saved recipient to get started.</p>
-                    </div>
-                    <label className="field-label" htmlFor="recipient">
-                      Recipient
-                    </label>
-                    <select
-                      id="recipient"
-                      value={draft.recipientId}
-                      onChange={(event) => setDraft({ ...draft, recipientId: event.target.value })}
-                    >
-                      {RECIPIENTS.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="recipient-detail">
-                      <Avatar name={recipient.name} category={recipient.category} />
-                      <div>
-                        <strong>{recipient.name}</strong>
-                        <span>{recipient.detail}</span>
-                      </div>
-                      <Lozenge appearance="success">Saved recipient</Lozenge>
-                    </div>
-                    <div className="field-row">
-                      <div>
-                        <label className="field-label" htmlFor="amount">
-                          Amount (GBP)
-                        </label>
-                        <Textfield
-                          id="amount"
-                          name="amount"
-                          value={draft.amount}
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          maxLength={12}
-                          onChange={(event) =>
-                            setDraft({ ...draft, amount: event.currentTarget.value })
-                          }
-                          aria-describedby="amount-help"
-                        />
-                        <small id="amount-help">
-                          Available: {money(state.balance)}. Maximum £10,000.
-                        </small>
-                      </div>
-                      <div>
-                        <label className="field-label" htmlFor="note">
-                          Reference <span className="muted">(optional)</span>
-                        </label>
-                        <Textfield
-                          id="note"
-                          value={draft.note}
-                          maxLength={200}
-                          placeholder="What’s it for?"
-                          onChange={(event) =>
-                            setDraft({ ...draft, note: event.currentTarget.value })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <fieldset className="method-fieldset">
-                      <legend>How would you like to pay?</legend>
-                      <p>Two familiar ways. One simple payment.</p>
-                      <label className={`method-card ${draft.method === 'card' ? 'selected' : ''}`}>
-                        <input
-                          type="radio"
-                          name="method"
-                          value="card"
-                          checked={draft.method === 'card'}
-                          onChange={() => setDraft({ ...draft, method: 'card' })}
-                        />
-                        <span className="method-icon">
-                          <CreditCard size={22} />
-                        </span>
-                        <span className="method-copy">
-                          <strong>Debit card</strong>
-                          <span>Meridian Visa •••• 4829</span>
-                        </span>
-                        <span className="provider-wordmark">adyen</span>
-                      </label>
-                      <label className={`method-card ${draft.method === 'bank' ? 'selected' : ''}`}>
-                        <input
-                          type="radio"
-                          name="method"
-                          value="bank"
-                          checked={draft.method === 'bank'}
-                          onChange={() => setDraft({ ...draft, method: 'bank' })}
-                        />
-                        <span className="method-icon">
-                          <Landmark size={22} />
-                        </span>
-                        <span className="method-copy">
-                          <strong>Bank payment</strong>
-                          <span>Your everyday account •• 2048</span>
-                        </span>
-                        <span className="provider-wordmark worldpay">Worldpay</span>
-                      </label>
-                    </fieldset>
-                    <div className="form-footer">
-                      <span>
-                        <LockKeyhole size={14} />
-                        Demo only. No real money moves.
-                      </span>
-                      <Button type="submit" appearance="primary">
-                        Review payment
-                      </Button>
-                    </div>
-                  </form>
-                )}
-                {step === 'review' && (
-                  <div className="review">
-                    <div className="form-intro">
-                      <h2>One last look.</h2>
-                      <p>Check everything below before confirming your demo payment.</p>
-                    </div>
-                    <div className="review-recipient">
-                      <Avatar name={recipient.name} category={recipient.category} />
-                      <span>Sending to {recipient.name}</span>
-                      <strong>{money(amount)}</strong>
-                    </div>
-                    <dl className="detail-list">
-                      <div>
-                        <dt>Payment method</dt>
-                        <dd>
-                          {draft.method === 'card'
-                            ? 'Debit card •••• 4829'
-                            : 'Bank payment •• 2048'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Provider</dt>
-                        <dd>
-                          {provider.name} <span className="muted">(simulated)</span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Reference</dt>
-                        <dd>{draft.note || 'No reference'}</dd>
-                      </div>
-                      <div>
-                        <dt>Fee</dt>
-                        <dd>
-                          £0.00 <span className="muted">in this demo</span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Balance after payment</dt>
-                        <dd>{money(state.balance - amount)}</dd>
-                      </div>
-                    </dl>
-                    <div className="form-footer">
-                      <Button
-                        onClick={() => {
-                          setStep('details');
-                          setErrors([]);
-                        }}
-                      >
-                        Back to details
-                      </Button>
-                      <Button
-                        appearance="primary"
-                        onClick={confirmPayment}
-                        isDisabled={
-                          busy ||
-                          (connectionMode === 'connected' && connectionStatus !== 'connected')
+            <>
+              <div className="payment-layout">
+                <section className="panel payment-panel">
+                  <ol className="stepper" aria-label="Payment progress">
+                    {['Payment details', 'Review', 'Complete'].map((label, index) => (
+                      <li
+                        key={label}
+                        className={
+                          index <= ['details', 'review', 'done'].indexOf(step) ? 'reached' : ''
+                        }
+                        aria-current={
+                          index === ['details', 'review', 'done'].indexOf(step) ? 'step' : undefined
                         }
                       >
-                        Confirm {money(amount)} payment
-                      </Button>
+                        <span>
+                          {index < ['details', 'review', 'done'].indexOf(step) ? (
+                            <Check size={13} />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        {label}
+                      </li>
+                    ))}
+                  </ol>
+                  {errors.length > 0 && (
+                    <div role="alert" className="message">
+                      <SectionMessage
+                        appearance="error"
+                        title={step === 'review' ? 'Payment not completed' : 'Check your payment'}
+                      >
+                        <p>
+                          {errors.join('. ')}
+                          {step === 'review' && connectionMode === 'standalone'
+                            ? '. No money has left your account. You can go back or change the demo scenario and retry.'
+                            : ''}
+                        </p>
+                      </SectionMessage>
                     </div>
-                  </div>
-                )}
-                {step === 'done' && lastPayment && (
-                  <div className="payment-success">
-                    <span className="success-icon">
-                      <CheckCircle2 size={38} />
+                  )}
+                  {step === 'details' && (
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const nextErrors = validatePayment(state, draft);
+                        setErrors(nextErrors);
+                        if (!nextErrors.length) setStep('review');
+                      }}
+                      noValidate
+                    >
+                      <div className="form-intro">
+                        <h2>Who are we paying?</h2>
+                        <p>Choose a saved recipient to get started.</p>
+                      </div>
+                      <label className="field-label" htmlFor="recipient">
+                        Recipient
+                      </label>
+                      <select
+                        id="recipient"
+                        value={draft.recipientId}
+                        onChange={(event) =>
+                          setDraft({ ...draft, recipientId: event.target.value })
+                        }
+                      >
+                        {RECIPIENTS.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="recipient-detail">
+                        <Avatar name={recipient.name} category={recipient.category} />
+                        <div>
+                          <strong>{recipient.name}</strong>
+                          <span>{recipient.detail}</span>
+                        </div>
+                        <Lozenge appearance="success">Saved recipient</Lozenge>
+                      </div>
+                      <div className="field-row">
+                        <div>
+                          <label className="field-label" htmlFor="amount">
+                            Amount (GBP)
+                          </label>
+                          <Textfield
+                            id="amount"
+                            name="amount"
+                            value={draft.amount}
+                            inputMode="decimal"
+                            placeholder="0.00"
+                            maxLength={12}
+                            onChange={(event) =>
+                              setDraft({ ...draft, amount: event.currentTarget.value })
+                            }
+                            aria-describedby="amount-help"
+                          />
+                          <small id="amount-help">
+                            Available: {money(state.balance)}. Maximum £10,000.
+                          </small>
+                        </div>
+                        <div>
+                          <label className="field-label" htmlFor="note">
+                            Reference <span className="muted">(optional)</span>
+                          </label>
+                          <Textfield
+                            id="note"
+                            value={draft.note}
+                            maxLength={200}
+                            placeholder="What’s it for?"
+                            onChange={(event) =>
+                              setDraft({ ...draft, note: event.currentTarget.value })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <fieldset className="method-fieldset">
+                        <legend>How would you like to pay?</legend>
+                        <p>Two familiar ways. One simple payment.</p>
+                        <label
+                          className={`method-card ${draft.method === 'card' ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name="method"
+                            value="card"
+                            checked={draft.method === 'card'}
+                            onChange={() => setDraft({ ...draft, method: 'card' })}
+                          />
+                          <span className="method-icon">
+                            <CreditCard size={22} />
+                          </span>
+                          <span className="method-copy">
+                            <strong>Debit card</strong>
+                            <span>Meridian Visa •••• 4829</span>
+                          </span>
+                          <span className="provider-wordmark">adyen</span>
+                        </label>
+                        <label
+                          className={`method-card ${draft.method === 'bank' ? 'selected' : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name="method"
+                            value="bank"
+                            checked={draft.method === 'bank'}
+                            onChange={() => setDraft({ ...draft, method: 'bank' })}
+                          />
+                          <span className="method-icon">
+                            <Landmark size={22} />
+                          </span>
+                          <span className="method-copy">
+                            <strong>Bank payment</strong>
+                            <span>Your everyday account •• 2048</span>
+                          </span>
+                          <span className="provider-wordmark worldpay">Worldpay</span>
+                        </label>
+                      </fieldset>
+                      <div className="form-footer">
+                        <span>
+                          <LockKeyhole size={14} />
+                          Demo only. No real money moves.
+                        </span>
+                        <Button type="submit" appearance="primary">
+                          Review payment
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                  {step === 'review' && (
+                    <div className="review">
+                      <div className="form-intro">
+                        <h2>One last look.</h2>
+                        <p>Check everything below before confirming your demo payment.</p>
+                      </div>
+                      <div className="review-recipient">
+                        <Avatar name={recipient.name} category={recipient.category} />
+                        <span>Sending to {recipient.name}</span>
+                        <strong>{money(amount)}</strong>
+                      </div>
+                      <dl className="detail-list">
+                        <div>
+                          <dt>Payment method</dt>
+                          <dd>
+                            {draft.method === 'card'
+                              ? 'Debit card •••• 4829'
+                              : 'Bank payment •• 2048'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Provider</dt>
+                          <dd>
+                            {provider.name} <span className="muted">(simulated)</span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Reference</dt>
+                          <dd>{draft.note || 'No reference'}</dd>
+                        </div>
+                        <div>
+                          <dt>Fee</dt>
+                          <dd>
+                            £0.00 <span className="muted">in this demo</span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Balance after payment</dt>
+                          <dd>{money(state.balance - amount)}</dd>
+                        </div>
+                      </dl>
+                      <div className="form-footer">
+                        <Button
+                          onClick={() => {
+                            setStep('details');
+                            setErrors([]);
+                          }}
+                        >
+                          Back to details
+                        </Button>
+                        <Button
+                          appearance="primary"
+                          onClick={confirmPayment}
+                          isDisabled={
+                            busy ||
+                            (connectionMode === 'connected' && connectionStatus !== 'connected')
+                          }
+                        >
+                          Confirm {money(amount)} payment
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {step === 'done' && lastPayment && (
+                    <div className="payment-success">
+                      <span className="success-icon">
+                        <CheckCircle2 size={38} />
+                      </span>
+                      <Lozenge appearance="success">Demo payment complete</Lozenge>
+                      <h2>A little thing, taken care of.</h2>
+                      <p>
+                        {money(lastPayment.amount)} sent to <strong>{lastPayment.name}</strong>.
+                      </p>
+                      <div className="receipt-chip">
+                        <span>Payment reference</span>
+                        <strong>{lastPayment.reference}</strong>
+                      </div>
+                      <p className="muted">Your balance and September budget are up to date.</p>
+                      <div className="success-actions">
+                        <Button appearance="primary" onClick={() => navigate('Overview')}>
+                          Back to overview
+                        </Button>
+                        <Button onClick={() => startPayment()}>Make another payment</Button>
+                        <Button appearance="subtle" onClick={() => setReceipt(lastPayment)}>
+                          View receipt
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+                <aside className="payment-aside">
+                  <div className="payment-note">
+                    <span className="icon-tile">
+                      <ShieldCheck size={24} />
                     </span>
-                    <Lozenge appearance="success">Demo payment complete</Lozenge>
-                    <h2>A little thing, taken care of.</h2>
+                    <h2>
+                      Consider it
+                      <br />
+                      taken care of.
+                    </h2>
                     <p>
-                      {money(lastPayment.amount)} sent to <strong>{lastPayment.name}</strong>.
+                      A clear view of what you’re paying, how you’re paying, and what’s left for
+                      you.
                     </p>
-                    <div className="receipt-chip">
-                      <span>Payment reference</span>
-                      <strong>{lastPayment.reference}</strong>
-                    </div>
-                    <p className="muted">Your balance and September budget are up to date.</p>
-                    <div className="success-actions">
-                      <Button appearance="primary" onClick={() => navigate('Overview')}>
-                        Back to overview
-                      </Button>
-                      <Button onClick={() => startPayment()}>Make another payment</Button>
-                      <Button appearance="subtle" onClick={() => setReceipt(lastPayment)}>
-                        View receipt
-                      </Button>
-                    </div>
+                    <div className="note-divider" />
+                    <span className="eyebrow">PAYING FROM</span>
+                    <strong>Everyday account</strong>
+                    <span>Available balance</span>
+                    <div className="aside-balance">{money(state.balance)}</div>
                   </div>
-                )}
-              </section>
-              <aside className="payment-aside">
-                <div className="payment-note">
-                  <span className="icon-tile">
-                    <ShieldCheck size={24} />
-                  </span>
-                  <h2>
-                    Consider it
-                    <br />
-                    taken care of.
-                  </h2>
-                  <p>
-                    A clear view of what you’re paying, how you’re paying, and what’s left for you.
+                  <div className="panel payment-impact">
+                    <div className="section-heading">
+                      <h3>Your plan stays in view</h3>
+                      <PieChart size={18} />
+                    </div>
+                    <p>{recipient.category} this month</p>
+                    <strong>
+                      {money(
+                        monthlySpent(state, recipient.category) + (step === 'done' ? 0 : amount),
+                      )}
+                    </strong>
+                    <span>{step === 'done' ? 'including this payment' : 'after this payment'}</span>
+                  </div>
+                  <p className="simulation-note">
+                    <Globe2 size={15} />
+                    Provider routing is simulated. No card or bank details are collected.
                   </p>
-                  <div className="note-divider" />
-                  <span className="eyebrow">PAYING FROM</span>
-                  <strong>Everyday account</strong>
-                  <span>Available balance</span>
-                  <div className="aside-balance">{money(state.balance)}</div>
-                </div>
-                <div className="panel payment-impact">
-                  <div className="section-heading">
-                    <h3>Your plan stays in view</h3>
-                    <PieChart size={18} />
-                  </div>
-                  <p>{recipient.category} this month</p>
-                  <strong>
-                    {money(
-                      monthlySpent(state, recipient.category) + (step === 'done' ? 0 : amount),
-                    )}
-                  </strong>
-                  <span>{step === 'done' ? 'including this payment' : 'after this payment'}</span>
-                </div>
-                <p className="simulation-note">
-                  <Globe2 size={15} />
-                  Provider routing is simulated. No card or bank details are collected.
-                </p>
-              </aside>
-            </div>
+                </aside>
+              </div>
+              <EuropeanPlans
+                plans={plans}
+                storageWarning={planStorageWarning}
+                onChange={updatePlans}
+              />
+            </>
           )}
 
           {page === 'Budgets' && (
@@ -1140,7 +1174,8 @@ export default function App() {
       {dialog === 'reset' && (
         <Dialog title="Start fresh?" onClose={() => setDialog(null)}>
           <p>
-            This resets this browser's demo payments and budgets to the original September snapshot.
+            This resets this browser's demo payments, budgets and European payment plans to the
+            original September snapshot.
           </p>
           <div className="dialog-actions">
             <Button onClick={() => setDialog(null)}>Keep my changes</Button>

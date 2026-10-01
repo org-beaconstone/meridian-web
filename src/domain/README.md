@@ -2,7 +2,8 @@
 
 Fictional GBP simulation, with no network or real credentials.
 
-- `model.ts`: exported types, `RECIPIENTS`, `PROVIDERS`, fixed `DEMO_DATE`, validation, integer-pence parsing, provider routing and payment execution.
+- `model.ts`: exported types, `RECIPIENTS`, `PROVIDERS`, fixed `DEMO_DATE`, validation, integer minor-unit parsing, provider routing and payment execution.
+- `european-plans.ts`: draft euro scheme plans (SEPA, iDEAL, Bancontact, Cartes Bancaires). No provider is attached, and settlement always leaves the ledger unchanged.
 - `storage.ts`: strict Zod validation, versioned browser state and graceful recovery.
 - `index.ts`: public barrel exports. Import using relative paths; this project has no `@/` alias.
 

@@ -28,9 +28,13 @@ For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p
 - A reset has a second confirmation; cancellation preserves changes.
 - Escape closes receipts and returns focus to the trigger.
 
+## European payment plans
+
+Open **Payments** and scroll to **European payment plans**. The catalogue lists SEPA Credit Transfer, SEPA Instant, iDEAL, Bancontact and Cartes Bancaires as planned schemes. Save a draft for Atelier Nord, `40.00` EUR, SEPA Instant. The row shows **Draft** and the available balance stays £12,480.50. An IBAN or long card number is rejected. **Reset everything** clears drafts. No third provider is named, and Adyen and Worldpay remain the only live routes. See [European payment plans](european-payments-plans.md).
+
 ## Planner handoff
 
-There are exactly two providers. A new European payment experience is intentionally absent, including hidden code or a pre-selected vendor. Frame the next task around evaluating local payment coverage, choosing a suitable provider against [the playbook](provider-expansion-playbook.md), and changing this payment screen.
+There are exactly two providers. European scheme plans are drafts only. Provider selection against [the playbook](provider-expansion-playbook.md) is still open, and this screen must not grow a hidden or pre-selected vendor.
 
 Use [company strategy](company-strategy.md), [compliance policy](compliance-policy.md), [API standards](api-standards.md) and [workspace map](workspace-map.md) as fictional planning context. They are repository documents, not published Confluence pages or existing Jira work items.
 

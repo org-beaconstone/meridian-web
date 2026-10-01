@@ -132,6 +132,45 @@ test('denied storage keeps app interactive', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
+test('european payment plans stay drafts and do not debit', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Payments', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'European payment plans' })).toBeVisible();
+  await page.getByLabel('Who is this plan for?').fill('DE89370400440532013000');
+  await page.getByLabel('Amount (EUR)').fill('40.00');
+  await page.getByRole('button', { name: 'Save draft plan' }).click();
+  await expect(page.getByRole('alert')).toContainText('Account numbers are not collected');
+  await expect(page.getByRole('list', { name: 'Saved European plans' })).toHaveCount(0);
+
+  await page.getByLabel('Who is this plan for?').fill('Atelier Nord');
+  await page.getByLabel('Amount (EUR)').fill('1.999');
+  await page.getByRole('button', { name: 'Save draft plan' }).click();
+  await expect(page.getByRole('alert')).toContainText('2 decimal places');
+
+  await page.getByLabel('Amount (EUR)').fill('40.00');
+  await page.getByLabel('Reference (optional)').last().fill('Studio visit');
+  await page.getByRole('radio', { name: /SEPA Instant/ }).check();
+  await page.getByRole('button', { name: 'Save draft plan' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Draft plan saved' })).toBeVisible();
+  const saved = page.getByRole('list', { name: 'Saved European plans' });
+  await expect(saved.getByRole('listitem')).toContainText('Atelier Nord');
+  await expect(saved.getByRole('listitem')).toContainText('€40.00');
+  await expect(saved.getByRole('listitem')).toContainText('Draft');
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+  await page.reload();
+  await page.getByRole('button', { name: 'Payments', exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Saved European plans' })).toContainText(
+    'Atelier Nord',
+  );
+
+  await page.getByRole('button', { name: 'Demo controls' }).click();
+  await page.getByRole('button', { name: 'Reset demo data' }).click();
+  await page.getByRole('button', { name: 'Reset everything' }).click();
+  await page.getByRole('button', { name: 'Payments', exact: true }).click();
+  await expect(page.getByText('No European plans in this browser yet.')).toBeVisible();
+});
+
 test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
