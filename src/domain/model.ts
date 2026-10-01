@@ -167,8 +167,8 @@ export function parseAmount(input: string): [number | null, string | null] {
     return [null, 'Amount cannot contain sign or exponent notation'];
   }
 
-  // Must be numeric with optional decimal point
-  if (!/^\d+(\.\d*)?$/.test(trimmed)) {
+  // Must be numeric with optional decimal point (at least one digit required after '.')
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
     return [null, 'Amount must be a valid number'];
   }
 

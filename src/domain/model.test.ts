@@ -93,6 +93,18 @@ describe('model', () => {
       expect(pence).toBeNull();
       expect(error).toContain('valid number');
     });
+
+    it('rejects trailing decimal point with no fractional digits', () => {
+      const [pence, error] = parseAmount('50.');
+      expect(pence).toBeNull();
+      expect(error).toContain('valid number');
+    });
+
+    it('rejects leading decimal point with no integer digits', () => {
+      const [pence, error] = parseAmount('.50');
+      expect(pence).toBeNull();
+      expect(error).toContain('valid number');
+    });
   });
 
   describe('getProvider', () => {
