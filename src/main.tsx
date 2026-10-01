@@ -1,3 +1,4 @@
+// hi from claude
 import { setBooleanFeatureFlagResolver } from '@atlaskit/platform-feature-flags';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
