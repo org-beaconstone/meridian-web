@@ -4,6 +4,7 @@
 export type Category = 'Shopping' | 'Food & drink' | 'Transport' | 'Bills' | 'Lifestyle';
 export type PaymentMethod = 'card' | 'bank';
 export type ProviderId = 'adyen' | 'worldpay';
+export type CurrencyCode = 'GBP' | 'EUR';
 export type Scenario = 'success' | 'declined' | 'unavailable';
 
 export interface Recipient {
@@ -146,10 +147,13 @@ export function getProvider(method: PaymentMethod): Provider {
  * - two decimal places maximum
  * - rejects sign, exponent notation
  * - rejects >2 decimals
- * - rejects amounts >£10000 or zero
- * Returns [pence, error] tuple
+ * - rejects amounts over 10,000 major units or zero
+ * Returns [minor units, error]. GBP minor units are pence; EUR minor units are cents.
  */
-export function parseAmount(input: string): [number | null, string | null] {
+export function parseAmount(
+  input: string,
+  currency: CurrencyCode = 'GBP',
+): [number | null, string | null] {
   const trimmed = input.trim();
 
   // Empty or whitespace only
@@ -198,8 +202,8 @@ export function parseAmount(input: string): [number | null, string | null] {
   }
 
   if (pence > 1000000) {
-    // 10000 pounds
-    return [null, 'Amount cannot exceed £10,000'];
+    const symbol = currency === 'EUR' ? '€' : '£';
+    return [null, `Amount cannot exceed ${symbol}10,000`];
   }
 
   return [pence, null];
@@ -420,15 +424,14 @@ export function updateBudget(
 }
 
 /**
- * Format pence to en-GB currency string
- * E.g. 3250 → "£32.50"
+ * Format integer minor units to an en-GB currency string.
+ * E.g. 3250 → "£32.50", or "€32.50" when currency is EUR.
  */
-export function money(pence: number): string {
-  const pounds = pence / 100;
+export function money(minor: number, currency: CurrencyCode = 'GBP'): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
-    currency: 'GBP',
-  }).format(pounds);
+    currency,
+  }).format(minor / 100);
 }
 
 /**

@@ -9,5 +9,6 @@ The existing [Confluence and Google documents](https://github.com/org-beaconston
 - [API standards](api-standards.md): target policy versus implemented Java rehearsal controls.
 - [Brand / ADS](brand-design-system.md): navy/gold identity, existing components and accessibility.
 - [Standalone rehearsal](demo-runbook.md), [connected mode](../INTEGRATION.md), [Kaizen hosting](deployment.md).
+- [European payment plans](european-payments-plans.md): PAY-159 draft catalogue. No provider is selected.
 
-Current provider baseline remains Adyen and Worldpay only. The next European integration is deliberately absent. Native configuration remains hardcoded to those two providers.
+Current provider baseline remains Adyen and Worldpay only. European schemes can be saved as drafts. The next provider integration is deliberately absent. Native configuration remains hardcoded to those two providers.

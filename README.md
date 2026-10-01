@@ -23,12 +23,13 @@ Node 22.12+ is required. The default standalone mode needs no API keys, backend 
 - Overview with available balance, monthly spending, quick recipients and recent activity.
 - Payment flow: saved recipient, GBP amount, reference, payment method, review, confirmation and receipt.
 - Current provider registry: **Adyen** for the card simulation, **Worldpay** for the bank-payment simulation. This routing is demo-specific, not a claim about product capabilities.
+- European payment plans: SEPA, iDEAL, Bancontact and Cartes Bancaires can be saved as euro drafts. They do not debit the balance and do not name another provider.
 - Successful payments debit the demo balance once and update activity and category spending.
 - Budget editing with validation, searchable/filterable activity and browser-local persistence.
 - Rehearsal controls: success, decline and unavailable scenarios, plus confirmed reset.
 - Responsive layout, keyboard navigation, semantic form controls and reduced-motion support.
 
-The next provider integration is deliberately absent. There is no provider installation UI, hidden feature flag or pre-built third-provider code. The repository is a baseline for a later planner-driven payment-screen change.
+The next provider integration is deliberately absent. There is no provider installation UI, hidden feature flag or pre-built third-provider code. European scheme plans are visible drafts while provider selection stays open.
 
 ## Scope and safety
 
