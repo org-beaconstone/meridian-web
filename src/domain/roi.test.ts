@@ -59,29 +59,30 @@ describe('whiteboard displacement', () => {
   });
 
   it('rejects incomplete or unsafe discovery inputs', () => {
+    const invalid = (fields: Parameters<typeof parseDisplacement>[0]) => {
+      const parsed = parseDisplacement(fields);
+      expect(parsed.ok).toBe(false);
+      return parsed.ok ? [] : parsed.errors;
+    };
+
     expect(
-      parseDisplacement({ competitor: 'figjam', seats: '10', pricePerSeat: '20', boards: '1' }).ok,
-    ).toBe(false);
+      invalid({ competitor: 'figjam', seats: '10', pricePerSeat: '20', boards: '1' }).join(' '),
+    ).toMatch(/Miro or Mural/);
     expect(
-      parseDisplacement({ competitor: 'miro', seats: '0', pricePerSeat: '20.00', boards: '0' })
-        .errors,
+      invalid({ competitor: 'miro', seats: '0', pricePerSeat: '20.00', boards: '0' }),
     ).toContain('Seats must be at least 1');
     expect(
-      parseDisplacement({ competitor: 'miro', seats: '10', pricePerSeat: '20.', boards: '0' })
-        .errors,
+      invalid({ competitor: 'miro', seats: '10', pricePerSeat: '20.', boards: '0' }),
     ).toContain('Price per seat must be a valid amount');
     expect(
-      parseDisplacement({ competitor: 'miro', seats: '10', pricePerSeat: '1.999', boards: '0' })
-        .errors,
+      invalid({ competitor: 'miro', seats: '10', pricePerSeat: '1.999', boards: '0' }),
     ).toContain('Price per seat must be a valid amount');
-    expect(
-      parseDisplacement({ competitor: 'miro', seats: '10', pricePerSeat: '-5', boards: '2' })
-        .errors,
-    ).toContain('Price per seat cannot contain a sign or exponent');
-    expect(
-      parseDisplacement({ competitor: 'miro', seats: '4', pricePerSeat: '20', boards: '-1' })
-        .errors,
-    ).toContain('Boards to import must be a whole number');
+    expect(invalid({ competitor: 'miro', seats: '10', pricePerSeat: '-5', boards: '2' })).toContain(
+      'Price per seat cannot contain a sign or exponent',
+    );
+    expect(invalid({ competitor: 'miro', seats: '4', pricePerSeat: '20', boards: '-1' })).toContain(
+      'Boards to import must be a whole number',
+    );
   });
 
   it('cites published Business list prices because the battle card ticket is unreadable', () => {
