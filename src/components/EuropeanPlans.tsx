@@ -109,7 +109,7 @@ export function EuropeanPlans({
         <div className="field-row">
           <div>
             <label className="field-label" htmlFor="european-note">
-              Reference <span className="muted">(optional)</span>
+              Plan reference <span className="muted">(optional)</span>
             </label>
             <Textfield
               id="european-note"

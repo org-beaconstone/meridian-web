@@ -22,7 +22,7 @@ test('overview renders cleanly and payment persists exactly once', async ({ page
   await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
   await page.evaluate(() => document.fonts.ready);
   await startPayment(page);
-  await page.getByLabel('Reference (optional)').fill('Friday essentials');
+  await page.getByLabel('Reference (optional)', { exact: true }).fill('Friday essentials');
   await page.getByRole('button', { name: 'Review payment' }).click();
   await expect(page.getByText('Adyen (simulated)', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm £25.99 payment' }).click();
@@ -148,7 +148,7 @@ test('european payment plans stay drafts and do not debit', async ({ page }) => 
   await expect(page.getByRole('alert')).toContainText('2 decimal places');
 
   await page.getByLabel('Amount (EUR)').fill('40.00');
-  await page.getByLabel('Reference (optional)').last().fill('Studio visit');
+  await page.getByLabel('Plan reference (optional)').fill('Studio visit');
   await page.getByRole('radio', { name: /SEPA Instant/ }).check();
   await page.getByRole('button', { name: 'Save draft plan' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Draft plan saved' })).toBeVisible();
