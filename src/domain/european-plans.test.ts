@@ -124,8 +124,8 @@ describe('european payment plans', () => {
       JSON.stringify({ version: 1, plans: [{ ...created.plan, provider: 'adyen' }] }),
     );
     expect(loadEuropeanPlans().plans).toEqual([]);
-    expect(saveEuropeanPlans([{ ...created.plan, status: 'live' } as EuropeanPaymentPlan])).toBe(
-      false,
-    );
+    expect(
+      saveEuropeanPlans([{ ...created.plan, status: 'live' } as unknown as EuropeanPaymentPlan]),
+    ).toBe(false);
   });
 });
