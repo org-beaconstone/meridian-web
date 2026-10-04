@@ -1885,6 +1885,163 @@ strong {
     font-size: 16px;
   }
 }
+/* ---------------------------------------------------------------------------
+   Sticky note showcase
+   --------------------------------------------------------------------------- */
+.sticky-note-section {
+  margin-top: 26px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.sticky-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+}
+.sticky-note-header h2 {
+  font-size: 15px;
+}
+.sticky-note-header p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.sticky-note-canvas {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  margin: 16px 0 0;
+  background: linear-gradient(to bottom, #fafcf8, #f2f5ef);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.sticky-note-float {
+  position: absolute;
+  bottom: -10px;
+  width: 120px;
+  min-height: 80px;
+  padding: 12px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--note-border, #f0d060);
+  background: var(--note-bg, #fff4c2);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--brand-navy);
+  font-weight: 500;
+  box-shadow: 2px 3px 8px #00000018, 0 1px 2px #0000000d;
+  word-break: break-word;
+  animation: note-float var(--note-duration, 10s) ease-in forwards;
+  transform-origin: bottom center;
+}
+@keyframes note-float {
+  0% {
+    transform: translateY(0) rotate(var(--note-rotate, 0deg));
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-250px) translateX(var(--note-drift, 0px))
+      rotate(calc(var(--note-rotate, 0deg) + 4deg));
+    opacity: 0;
+  }
+}
+.sticky-note-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 18px 24px 22px;
+  flex-wrap: wrap;
+}
+.sticky-note-palette {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+}
+.sticky-note-palette legend {
+  margin-bottom: 8px;
+}
+.palette-swatches {
+  display: flex;
+  gap: 8px;
+}
+.palette-swatch-label {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+}
+.palette-swatch-label input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.palette-swatch {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px #d0d4cd;
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+.palette-swatch-label:hover .palette-swatch {
+  box-shadow: 0 0 0 2px var(--ds-border-focused, #4688fa);
+  transform: scale(1.1);
+}
+.palette-swatch-label input:checked ~ .palette-swatch {
+  box-shadow: 0 0 0 2px var(--brand-navy);
+  transform: scale(1.15);
+}
+.palette-swatch-label input:focus-visible ~ .palette-swatch {
+  outline: 3px solid var(--ds-border-focused, #4688fa);
+  outline-offset: 2px;
+}
+.sticky-note-input-row {
+  flex: 1;
+  min-width: 160px;
+}
+.sticky-note-input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--ds-border-input, #85908c);
+  border-radius: var(--ds-radius-small, 4px);
+  padding: 8px 12px;
+  background: var(--preview-bg, #fff);
+  color: var(--ds-text);
+  transition: background 0.2s;
+}
+.sticky-note-input:focus {
+  outline: 3px solid var(--ds-border-focused, #4688fa);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .sticky-note-form {
+    gap: 14px;
+    padding: 16px 18px 20px;
+  }
+  .sticky-note-canvas {
+    height: 180px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sticky-note-float {
+    animation: none;
+    opacity: 1;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%) rotate(var(--note-rotate, 0deg)) !important;
+  }
+}
+
 /* Contrast-adjusted secondary copy keeps the quiet brand treatment readable. */
 .workspace-label,
 .breadcrumb,
