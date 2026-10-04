@@ -1,6 +1,50 @@
 // Domain model for Meridian banking demo
 // Fictional data only - no real payments or credentials
 
+// ---------------------------------------------------------------------------
+// Sticky note colour palette
+// ---------------------------------------------------------------------------
+
+export type StickyNoteColor = 'yellow' | 'green' | 'blue' | 'peach' | 'lavender';
+
+export interface StickyNoteColorDef {
+  id: StickyNoteColor;
+  label: string;
+  background: string;
+  border: string;
+}
+
+export const STICKY_NOTE_COLORS: StickyNoteColorDef[] = [
+  { id: 'yellow', label: 'Sunshine', background: '#FFF4C2', border: '#F0D060' },
+  { id: 'green', label: 'Sage', background: '#DCF0D8', border: '#9FD097' },
+  { id: 'blue', label: 'Sky', background: '#D6E8F5', border: '#8FC3E2' },
+  { id: 'peach', label: 'Peach', background: '#FDDEC5', border: '#F4B07A' },
+  { id: 'lavender', label: 'Lavender', background: '#EAE0F4', border: '#C0A8E8' },
+];
+
+export const DEFAULT_STICKY_NOTE_COLOR: StickyNoteColor = 'yellow';
+
+export interface StickyNote {
+  id: string;
+  text: string;
+  color: StickyNoteColor;
+}
+
+export function createStickyNote(
+  text: string,
+  color: StickyNoteColor = DEFAULT_STICKY_NOTE_COLOR,
+): StickyNote {
+  return { id: crypto.randomUUID(), text: text.trim(), color };
+}
+
+export function isValidStickyNoteColor(color: string): color is StickyNoteColor {
+  return STICKY_NOTE_COLORS.some((c) => c.id === color);
+}
+
+// ---------------------------------------------------------------------------
+// Banking domain
+// ---------------------------------------------------------------------------
+
 export type Category = 'Shopping' | 'Food & drink' | 'Transport' | 'Bills' | 'Lifestyle';
 export type PaymentMethod = 'card' | 'bank';
 export type ProviderId = 'adyen' | 'worldpay';
