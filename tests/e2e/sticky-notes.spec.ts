@@ -17,7 +17,7 @@ test('colour palette updates the preview and stays on the moving note', async ({
   await expect(preview).toHaveCSS('background-color', 'rgb(246, 213, 207)');
   await expect(preview).toHaveCSS('color', 'rgb(74, 36, 28)');
 
-  await page.getByLabel('Note').fill('Pack the picnic rug');
+  await page.getByRole('textbox', { name: 'Note', exact: true }).fill('Pack the picnic rug');
   await expect(preview).toContainText('Pack the picnic rug');
   await page.getByRole('button', { name: 'Add sticky note' }).click();
   await expect(
@@ -27,7 +27,7 @@ test('colour palette updates the preview and stays on the moving note', async ({
   const note = page.getByTestId('sticky-note').filter({ hasText: 'Pack the picnic rug' });
   await expect(note).toHaveAttribute('data-colour', 'blush');
   await expect(note).toHaveCSS('background-color', 'rgb(246, 213, 207)');
-  await expect(page.getByLabel('Note')).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Note', exact: true })).toHaveValue('');
 
   const earlier = page
     .getByTestId('sticky-note')
@@ -64,7 +64,7 @@ test('sticky note colour selection fits a phone width', async ({ page }) => {
 
   await page.getByRole('radio', { name: 'Lilac' }).check();
   await expect(page.getByTestId('sticky-preview')).toHaveAttribute('data-colour', 'lilac');
-  await page.getByLabel('Note').fill('A note from the train');
+  await page.getByRole('textbox', { name: 'Note', exact: true }).fill('A note from the train');
   await page.getByRole('button', { name: 'Add sticky note' }).click();
   const note = page.getByTestId('sticky-note').filter({ hasText: 'A note from the train' });
   await expect(note).toHaveAttribute('data-colour', 'lilac');
