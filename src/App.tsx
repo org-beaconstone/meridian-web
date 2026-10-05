@@ -26,6 +26,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import StickyNote from './components/StickyNote';
+import { DEFAULT_COLOUR_ID, STICKY_COLOURS, type StickyColour } from './stickyNotes';
 import {
   getProvider,
   money,
@@ -163,6 +165,11 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sessionInput, setSessionInput] = useState(sessionId);
+  const [stickyNotes, setStickyNotes] = useState<
+    Array<{ id: string; text: string; colour: StickyColour }>
+  >([]);
+  const [noteText, setNoteText] = useState('');
+  const [selectedColourId, setSelectedColourId] = useState(DEFAULT_COLOUR_ID);
   const paymentId = useRef(crypto.randomUUID());
   const confirming = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -246,6 +253,15 @@ export default function App() {
     } else {
       setNotice(`Reset failed: ${result.error || 'Unknown error'}`);
     }
+  }
+
+  function addStickyNote(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmed = noteText.trim();
+    if (!trimmed) return;
+    const colour = STICKY_COLOURS.find((c) => c.id === selectedColourId) ?? STICKY_COLOURS[0];
+    setStickyNotes((prev) => [...prev, { id: crypto.randomUUID(), text: trimmed, colour }]);
+    setNoteText('');
   }
 
   function budgetLine(budget: Budget, compact = false) {
@@ -576,8 +592,60 @@ export default function App() {
                   </section>
                 </div>
               </div>
-            </>
-          )}
+            <section className="panel sticky-showcase" aria-labelledby="sticky-heading">
+              <div className="section-heading">
+                <div>
+                  <h2 id="sticky-heading">Leave your mark</h2>
+                  <p>Pin a thought, idea, or reminder to your overview.</p>
+                </div>
+              </div>
+              <div className="sticky-stage" role="region" aria-label="Sticky notes board">
+                {stickyNotes.map((note, i) => (
+                  <StickyNote key={note.id} text={note.text} colour={note.colour} animIndex={i} />
+                ))}
+                {stickyNotes.length === 0 && (
+                  <p className="sticky-empty muted">Your notes will appear here.</p>
+                )}
+              </div>
+              <form onSubmit={addStickyNote} className="sticky-form">
+                <div className="colour-palette" role="group" aria-label="Note colour">
+                  {STICKY_COLOURS.map((colour) => (
+                    <label
+                      key={colour.id}
+                      className={`colour-swatch${selectedColourId === colour.id ? ' selected' : ''}`}
+                      title={colour.label}
+                    >
+                      <input
+                        type="radio"
+                        name="sticky-colour"
+                        value={colour.id}
+                        aria-label={colour.label}
+                        checked={selectedColourId === colour.id}
+                        onChange={() => setSelectedColourId(colour.id)}
+                      />
+                      <span style={{ background: colour.value }} />
+                    </label>
+                  ))}
+                </div>
+                <div className="sticky-input-row">
+                  <Textfield
+                    value={noteText}
+                    onChange={(event) => setNoteText(event.currentTarget.value)}
+                    placeholder="Add a note…"
+                    maxLength={100}
+                    aria-label="Sticky note text"
+                  />
+                  <Button type="submit" appearance="primary" isDisabled={!noteText.trim()}>
+                    <span className="button-with-icon">
+                      <Plus size={16} />
+                      Add note
+                    </span>
+                  </Button>
+                </div>
+              </form>
+            </section>
+          </>
+        )}
 
           {page === 'Payments' && (
             <div className="payment-layout">
