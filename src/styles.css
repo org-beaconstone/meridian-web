@@ -1899,11 +1899,111 @@ strong {
 .merchant-avatar {
   color: color-mix(in srgb, var(--merchant-color, #839478) 45%, #172720);
 }
+/* Sticky note showcase */
+.sticky-showcase {
+  margin-top: 22px;
+}
+.sticky-stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  min-height: 140px;
+  padding: 12px 0 18px;
+  align-items: flex-start;
+}
+.sticky-empty {
+  font-size: 13px;
+  align-self: center;
+}
+@keyframes stickyFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--sticky-rotate, -1.5deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(calc(var(--sticky-rotate, -1.5deg) * -1));
+  }
+}
+.sticky-note {
+  background: var(--sticky-bg, #f7e97a);
+  color: var(--sticky-text, #3a3200);
+  padding: 14px 12px 18px;
+  border-radius: 2px;
+  box-shadow:
+    2px 3px 10px rgba(0, 0, 0, 0.13),
+    0 1px 2px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+  line-height: 1.55;
+  width: 130px;
+  min-height: 100px;
+  word-break: break-word;
+  animation: stickyFloat ease-in-out infinite;
+}
+.colour-palette {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.colour-swatch {
+  cursor: pointer;
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.colour-swatch input[type='radio'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 1;
+}
+.colour-swatch span {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+  pointer-events: none;
+}
+.colour-swatch.selected span,
+.colour-swatch:focus-within span {
+  border-color: var(--ds-border-selected, #1868db);
+  transform: scale(1.2);
+}
+.sticky-form {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.sticky-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.sticky-input-row > :first-child {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .sticky-input-row {
+    flex-direction: column;
+  }
+  .sticky-input-row > :first-child {
+    width: 100%;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+  .sticky-note {
+    animation: none !important;
   }
 }
