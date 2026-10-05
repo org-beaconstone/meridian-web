@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import StickyNoteShowcase from './components/StickyNoteShowcase';
 import {
   getProvider,
   money,
@@ -576,6 +577,7 @@ export default function App() {
                   </section>
                 </div>
               </div>
+              <StickyNoteShowcase />
             </>
           )}
 
