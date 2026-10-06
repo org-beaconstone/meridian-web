@@ -152,3 +152,49 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
 });
+
+test('sticky showcase: palette renders all five colours with Sunshine selected by default', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const palette = page.getByRole('group', { name: 'Choose a colour' });
+  await expect(palette).toBeVisible();
+  const swatches = palette.getByRole('radio');
+  await expect(swatches).toHaveCount(5);
+  await expect(palette.getByRole('radio', { name: 'Sunshine' })).toBeChecked();
+});
+
+test('sticky showcase: selecting a colour updates the preview immediately', async ({ page }) => {
+  await page.goto('/');
+  const preview = page.locator('.sticky-preview');
+  const defaultBg = await preview.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await page.locator('.colour-swatch-label[title="Lavender"]').click();
+  await expect(page.getByRole('radio', { name: 'Lavender' })).toBeChecked();
+  // Preview background must change away from the Sunshine default
+  const newBg = await preview.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(newBg).not.toBe(defaultBg);
+});
+
+test('sticky showcase: adding a note shows it on the board', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Your note').fill('Hello Meridian!');
+  await page.getByRole('button', { name: 'Add to the flow' }).click();
+  const notes = page.locator('[data-testid="floating-sticky-note"]');
+  // Seed notes are already there; after adding, count increases to at least 6
+  await expect(notes).toHaveCount(6);
+});
+
+test('sticky showcase: note added with selected colour appears with that colour', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('.colour-swatch-label[title="Peach"]').click();
+  await page.getByLabel('Your note').fill('Peach note');
+  await page.getByRole('button', { name: 'Add to the flow' }).click();
+  const notes = page.locator('[data-testid="floating-sticky-note"]');
+  const lastNote = notes.last();
+  await expect(lastNote).toBeVisible();
+  // Peach colour is #FFCCBC → rgb(255, 204, 188)
+  const bg = await lastNote.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe('rgb(255, 204, 188)');
+});
