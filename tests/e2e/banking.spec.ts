@@ -132,6 +132,35 @@ test('denied storage keeps app interactive', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
+test('sticky note showcase: seed notes render, colour selection updates preview, add note works', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  // Five pre-seeded notes are visible
+  await expect(page.locator('.sticky-note-card')).toHaveCount(5);
+
+  // The colour palette has 5 swatches
+  const palette = page.getByTestId('colour-palette');
+  await expect(palette.locator('.colour-swatch')).toHaveCount(5);
+
+  // Selecting Pink marks it as pressed and updates the preview background
+  const pinkSwatch = page.getByRole('button', { name: 'Pink' });
+  await pinkSwatch.click();
+  await expect(pinkSwatch).toHaveAttribute('aria-pressed', 'true');
+  const preview = page.getByTestId('sticky-note-preview');
+  await expect(preview).toHaveCSS('background-color', 'rgb(254, 205, 211)'); // #FECDD3
+
+  // Typing a message updates the preview text
+  await page.getByLabel('Your message').fill('Hello Meridian!');
+  await expect(preview).toContainText('Hello Meridian!');
+
+  // Adding the note increments the count and clears the input
+  await page.getByRole('button', { name: 'Add note' }).click();
+  await expect(page.locator('.sticky-note-card')).toHaveCount(6);
+  await expect(page.getByLabel('Your message')).toHaveValue('');
+});
+
 test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
