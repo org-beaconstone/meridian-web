@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import RegistrationDialog from './components/RegistrationDialog';
 import {
   getProvider,
   money,
@@ -153,9 +154,9 @@ export default function App() {
   const [scenario, setScenario] = useState<Scenario>('success');
   const [receipt, setReceipt] = useState<Transaction | null>(null);
   const [lastPayment, setLastPayment] = useState<Transaction | null>(null);
-  const [dialog, setDialog] = useState<'controls' | 'account' | 'reset' | 'connection' | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    'controls' | 'account' | 'reset' | 'connection' | 'registration' | null
+  >(null);
   const [budgetEdit, setBudgetEdit] = useState<Budget | null>(null);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetError, setBudgetError] = useState('');
@@ -1079,8 +1080,15 @@ export default function App() {
               details into this demo.
             </p>
           </SectionMessage>
+          <div className="dialog-actions">
+            <Button onClick={() => setDialog('registration')}>Check registration details</Button>
+            <Button appearance="primary" onClick={() => setDialog(null)}>
+              Done
+            </Button>
+          </div>
         </Dialog>
       )}
+      {dialog === 'registration' && <RegistrationDialog onClose={() => setDialog('account')} />}
       {dialog === 'controls' && (
         <Dialog title="Rehearsal controls" onClose={() => setDialog(null)}>
           <p>

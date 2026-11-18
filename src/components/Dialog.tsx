@@ -5,10 +5,12 @@ export default function Dialog({
   title,
   children,
   onClose,
+  className,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -21,7 +23,12 @@ export default function Dialog({
     };
   }, []);
   return (
-    <dialog ref={ref} aria-labelledby="dialog-title" onCancel={onClose} className="dialog">
+    <dialog
+      ref={ref}
+      aria-labelledby="dialog-title"
+      onCancel={onClose}
+      className={className ? `dialog ${className}` : 'dialog'}
+    >
       <div className="dialog-heading">
         <h2 id="dialog-title">{title}</h2>
         <Button appearance="subtle" onClick={onClose}>
