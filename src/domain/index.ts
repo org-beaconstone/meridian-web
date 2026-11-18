@@ -31,3 +31,12 @@ export {
 
 export { STORAGE_KEY, loadState, saveState } from './storage';
 export type { LoadStateResult } from './storage';
+
+export type {
+  Registration,
+  RegistrationDraft,
+  RegistrationField,
+  RegistrationFieldError,
+  RegistrationResult,
+} from './registration';
+export { blankRegistrationDraft, prepareRegistration, validateRegistration } from './registration';

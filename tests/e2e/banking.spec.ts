@@ -1,4 +1,17 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+
+async function expectAccessible(page: Page) {
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(
+    result.violations.map((item) => ({
+      id: item.id,
+      nodes: item.nodes.map((node) => ({ target: node.target, failure: node.failureSummary })),
+    })),
+  ).toEqual([]);
+}
 
 async function startPayment(page: Page, amount = '25.99') {
   await page.getByRole('button', { name: 'Make a payment', exact: true }).first().click();
@@ -151,4 +164,53 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
+});
+
+test('registration checks reject bad details and accept a fictional applicant', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Account details' }).click();
+  await page.getByRole('button', { name: 'Check registration details' }).click();
+  await expect(page.getByRole('heading', { name: 'Registration details' })).toBeVisible();
+  await expectAccessible(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectAccessible(page);
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.getByRole('button', { name: 'Check details' }).click();
+  await expect(page.getByRole('alert')).toContainText('Given name is required');
+  await page.getByLabel('Given name').fill('Alex');
+  await page.getByLabel('Family name').fill('Morgan');
+  await page.getByLabel('Email').fill('not-an-email');
+  await page.getByLabel('Mobile number').fill('02079460958');
+  await page.getByLabel('Date of birth').fill('2010-09-19');
+  await page.getByLabel('Address').fill('4111 1111 1111 1111');
+  await page.getByLabel('City').fill('Bristol');
+  await page.getByLabel('Postcode').fill('12345');
+  await page.getByRole('button', { name: 'Check details' }).click();
+  const alert = page.getByRole('alert');
+  await expect(alert).toContainText('valid email');
+  await expect(alert).toContainText('UK mobile');
+  await expect(alert).toContainText('18 or older');
+  await expect(alert).toContainText('not accepted');
+  await expect(alert).toContainText('UK postcode');
+  await expect(alert).toContainText('fictional demo');
+  await page.getByLabel('Email').fill('alex.morgan@example.com');
+  await page.getByLabel('Mobile number').fill('07700 900123');
+  await page.getByLabel('Date of birth').fill('1994-03-12');
+  await page.getByLabel('Address').fill('14 Harbour Lane');
+  await page.getByLabel('Postcode').fill('bs1 4st');
+  await page.getByRole('checkbox', { name: /fictional demo/ }).check();
+  await page.getByRole('button', { name: 'Check details' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Nothing was saved' })).toBeVisible();
+  await expectAccessible(page);
+  await expect(page.getByRole('dialog')).toContainText('alex.morgan@example.com');
+  await expect(page.getByRole('dialog')).toContainText('+44 7700 900123');
+  await expect(page.getByRole('dialog')).toContainText('BS1 4ST');
+  const stored = await page.evaluate(() => JSON.stringify(localStorage));
+  expect(stored).not.toContain('alex.morgan@example.com');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('fictional GBP account');
 });

@@ -1351,6 +1351,45 @@ strong {
   gap: 12px;
   margin-top: 25px;
 }
+.dialog.dialog-wide {
+  width: min(640px, calc(100% - 32px));
+}
+.registration-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+.dialog .registration-grid .field-label {
+  margin-top: 14px;
+}
+.registration-span {
+  grid-column: 1 / -1;
+}
+.registration-grid small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+.terms-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.terms-check input {
+  margin-top: 2px;
+  accent-color: var(--ds-background-brand-bold, #1868db);
+  height: 17px;
+  width: 17px;
+  flex-shrink: 0;
+}
 .receipt-heading {
   text-align: center;
   display: flex;
@@ -1802,7 +1841,8 @@ strong {
   .recipient-detail > div {
     min-width: 150px;
   }
-  .field-row {
+  .field-row,
+  .registration-grid {
     grid-template-columns: 1fr;
     gap: 22px;
   }

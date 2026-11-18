@@ -8,6 +8,8 @@ Fictional GBP simulation, with no network or real credentials.
 
 `parseAmount(string)` returns `[pence | null, error | null]`. It rejects zero, signs, exponent notation, more than two decimals and amounts over £10,000. `validatePayment(state, draft)` also checks the recipient, method, available balance and note length.
 
+`validateRegistration(draft, asOf?)` checks a fictional personal-account application independently of the form: names, email, a UK mobile, a real date of birth aged 18–120 on the rehearsal date, a UK address and an explicit confirmation that the demo must not store the details. `prepareRegistration` returns that normalized record or the same field errors. It does not open an account, create a login or write storage. Card numbers and IBANs are rejected.
+
 `executePayment(state, draft, scenario, id, now)` returns a discriminated union: `{ ok: true, state, transaction }` or `{ ok: false, error }`. It does not mutate the input. Repeated successful IDs with the same payload do not debit again. An altered recipient, amount, method or note with the same ID is rejected. Decline and unavailable return errors without adding transactions or moving money. This in-memory behavior is not a server-side idempotency guarantee.
 
 `monthlySpent` sums completed transactions for the fixed demo month. `updateBudget` accepts a positive limit up to £10,000. `money` formats integer pence as GBP. The initial state has £12,480.50 balance, £1,842.80 spent and £3,200 total category limits.
