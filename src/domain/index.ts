@@ -31,3 +31,23 @@ export {
 
 export { STORAGE_KEY, loadState, saveState } from './storage';
 export type { LoadStateResult } from './storage';
+
+export type {
+  GateRefusal,
+  IdentityCapture,
+  IdentityCode,
+  IdentityDecision,
+  IdentityLogRecord,
+  VerificationOutcome,
+} from './identity';
+export {
+  IDENTITY_INTEGRATION,
+  acceptInitialFunding,
+  acknowledgeContract,
+  activateSavingsAccount,
+  consentError,
+  identityLogRecord,
+  submitIdentity,
+  validateIdentityCapture,
+  writeIdentityLog,
+} from './identity';

@@ -3,6 +3,7 @@
 Fictional GBP simulation, with no network or real credentials.
 
 - `model.ts`: exported types, `RECIPIENTS`, `PROVIDERS`, fixed `DEMO_DATE`, validation, integer-pence parsing, provider routing and payment execution.
+- `identity.ts`: fictional savings-account identity check. Rehearsal outcomes are verified, rejected, or temporarily unavailable. Rejection is final; unavailability is retryable. Account activation and initial funding stay refused, including after a verified rehearsal, until the W02 verification contract is delivered. Logs keep only the outcome record.
 - `storage.ts`: strict Zod validation, versioned browser state and graceful recovery.
 - `index.ts`: public barrel exports. Import using relative paths; this project has no `@/` alias.
 

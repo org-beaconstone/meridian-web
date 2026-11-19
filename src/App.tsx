@@ -25,6 +25,7 @@ import {
   Sparkles,
   Wallet,
 } from 'lucide-react';
+import AccountOpening from './components/AccountOpening';
 import Dialog from './components/Dialog';
 import {
   getProvider,
@@ -41,7 +42,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection' | 'Open account';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -414,7 +415,11 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                {page === 'Overview' ? 'FRIDAY, 18 SEPTEMBER 2026' : 'YOUR MONEY. YOUR WAY.'}
+                {page === 'Overview'
+                  ? 'FRIDAY, 18 SEPTEMBER 2026'
+                  : page === 'Open account'
+                    ? 'SAVINGS ACCOUNT'
+                    : 'YOUR MONEY. YOUR WAY.'}
               </div>
               <h1 ref={heading} tabIndex={-1}>
                 {page === 'Overview'
@@ -423,7 +428,9 @@ export default function App() {
                     ? 'A little closer. One payment away.'
                     : page === 'Budgets'
                       ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                      : page === 'Open account'
+                        ? 'Open a savings account.'
+                        : 'The story of your spending.'}
               </h1>
               <p>
                 {page === 'Overview'
@@ -432,10 +439,12 @@ export default function App() {
                     ? 'Pay with confidence. Keep your plans in view.'
                     : page === 'Budgets'
                       ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
+                      : page === 'Open account'
+                        ? 'A fictional identity check. No account opens without an accepted verification.'
+                        : 'Every payment, in one clear picture.'}
               </p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'Open account' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -577,6 +586,10 @@ export default function App() {
                 </div>
               </div>
             </>
+          )}
+
+          {page === 'Open account' && (
+            <AccountOpening balance={state.balance} onLeave={() => navigate('Overview')} />
           )}
 
           {page === 'Payments' && (
@@ -1079,6 +1092,17 @@ export default function App() {
               details into this demo.
             </p>
           </SectionMessage>
+          <div className="dialog-actions">
+            <Button
+              appearance="primary"
+              onClick={() => {
+                setDialog(null);
+                navigate('Open account');
+              }}
+            >
+              Open a savings account
+            </Button>
+          </div>
         </Dialog>
       )}
       {dialog === 'controls' && (
