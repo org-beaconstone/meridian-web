@@ -20,3 +20,43 @@ for (const width of [1440, 390])
       ).toEqual([]);
     }
   });
+
+for (const width of [1440, 390])
+  test(`account opening at ${width}px has no detected WCAG AA violations`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Account details' }).click();
+    await page.getByRole('button', { name: 'Open a savings account' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const welcome = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(welcome.violations, 'welcome').toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('checkbox', { name: /fictional demo/ }).check();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByLabel('Given name').fill('Jordan');
+    await page.getByLabel('Family name').fill('Ellis');
+    await page.getByLabel('Date of birth').fill('1990-04-12');
+    await page.getByLabel('Fictional reference').fill('AB12CD34');
+    await page.getByLabel('Rehearsal verification outcome').selectOption('unavailable');
+    await page.getByRole('button', { name: 'Check identity' }).click();
+    await expect(page.getByTestId('identity-outcome')).toBeVisible();
+    const outcome = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(
+      outcome.violations.map((item) => ({
+        id: item.id,
+        nodes: item.nodes.map((node) => ({ target: node.target, failure: node.failureSummary })),
+      })),
+      'outcome',
+    ).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  });

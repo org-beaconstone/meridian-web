@@ -152,3 +152,85 @@ test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'View receipt' })).toBeFocused();
 });
+
+async function openSavings(page: Page) {
+  await page.getByRole('button', { name: 'Account details' }).click();
+  await page.getByRole('button', { name: 'Open a savings account' }).click();
+  await expect(page.getByRole('heading', { name: 'Open a savings account.' })).toBeVisible();
+}
+
+async function completeIdentity(page: Page, outcome: string) {
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('checkbox', { name: /fictional demo/ }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Given name').fill('Jordan');
+  await page.getByLabel('Family name').fill('Ellis');
+  await page.getByLabel('Date of birth').fill('1990-04-12');
+  await page.getByLabel('Fictional reference').fill('AB12CD34');
+  await page.getByLabel('Rehearsal verification outcome').selectOption(outcome);
+  await page.getByRole('button', { name: 'Check identity' }).click();
+}
+
+test('identity outcomes do not open an account or log personal details', async ({ page }) => {
+  const logs: string[] = [];
+  page.on('console', (message) => logs.push(message.text()));
+  await page.goto('/');
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+  await openSavings(page);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('alert')).toContainText('Consent is required');
+
+  await page.getByRole('checkbox', { name: /fictional demo/ }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Given name').fill('Jordan');
+  await page.getByLabel('Family name').fill('Ellis');
+  await page.getByLabel('Date of birth').fill('1990-04-12');
+  await page.getByLabel('Fictional reference').fill('4242424242424242');
+  await page.getByRole('button', { name: 'Check identity' }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Card numbers, credentials, and tokens are not accepted',
+  );
+  await expect(page.getByRole('alert')).not.toContainText('4242424242424242');
+
+  await page.getByLabel('Fictional reference').fill('AB12CD34');
+  await page.getByLabel('Rehearsal verification outcome').selectOption('rejected');
+  await page.getByRole('button', { name: 'Check identity' }).click();
+  await expect(page.getByTestId('identity-outcome')).toContainText('final decision');
+  await expect(page.getByTestId('identity-outcome')).not.toContainText('unavailable');
+  await expect(page.getByRole('button', { name: 'Retry verification' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Set up savings account' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add initial funding' })).toHaveCount(0);
+  await expect(page.getByText('Not opened')).toBeVisible();
+  await expect(page.getByText('Not accepted')).toBeVisible();
+  const rejectedHtml = await page.locator('.journey-layout').innerHTML();
+  expect(rejectedHtml).not.toContain('AB12CD34');
+  expect(rejectedHtml).not.toContain('Jordan');
+  expect(rejectedHtml).not.toContain('1990-04-12');
+
+  await page.getByRole('button', { name: 'Start a new application' }).click();
+  await completeIdentity(page, 'unavailable');
+  await expect(page.getByTestId('identity-outcome')).toContainText('not a rejection');
+  await expect(page.getByTestId('identity-outcome')).not.toContainText('final decision');
+  await expect(page.getByRole('button', { name: 'Retry verification' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Set up savings account' })).toHaveCount(0);
+  await page.getByLabel('Rehearsal verification outcome').selectOption('verified');
+  await page.getByRole('button', { name: 'Retry verification' }).click();
+  await expect(page.getByTestId('identity-outcome')).toContainText('not an accepted verification');
+  await page.getByRole('button', { name: 'Set up savings account' }).click();
+  await expect(page.getByRole('alert')).toContainText('W02');
+  await expect(page.getByRole('alert')).toContainText('26 November 2026');
+  await expect(page.getByRole('alert')).not.toContainText('rejected');
+  await page.getByRole('button', { name: 'Add initial funding' }).click();
+  await expect(page.getByRole('alert')).toContainText('funding is not accepted');
+  await expect(page.getByText('Everyday balance £12,480.50')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+
+  const stored = await page.evaluate(() => localStorage.getItem('meridian_bank_state') ?? '');
+  const consoleText = logs.join('\n');
+  for (const secret of ['Jordan', 'Ellis', '1990-04-12', 'AB12CD34', '4242424242424242']) {
+    expect(stored).not.toContain(secret);
+    expect(consoleText).not.toContain(secret);
+  }
+});

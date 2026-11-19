@@ -1141,6 +1141,74 @@ strong {
   color: var(--muted);
   padding: 0 10px;
 }
+.journey-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 0.8fr);
+  gap: 28px;
+  align-items: start;
+}
+.journey-note {
+  margin-top: 18px;
+}
+.journey-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+.consent-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 18px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.consent-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--ds-background-brand-bold, #1868db);
+}
+.gate-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+.gate-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fbfcf9;
+}
+.gate-list dt,
+.gate-list dd {
+  margin: 0;
+  font-size: 13px;
+}
+.gate-list dd {
+  font-weight: 650;
+}
+.journey-aside {
+  padding: 22px;
+}
+.journey-aside h2 {
+  margin: 14px 0 8px;
+}
+.journey-aside p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.journey-layout .field-row {
+  margin-bottom: 18px;
+}
+.journey-layout select {
+  margin-bottom: 8px;
+}
 .review-recipient {
   display: flex;
   align-items: center;
@@ -1549,7 +1617,8 @@ strong {
   .demo-badge {
     display: none;
   }
-  .payment-layout {
+  .payment-layout,
+  .journey-layout {
     grid-template-columns: 1fr;
   }
   .payment-aside {
