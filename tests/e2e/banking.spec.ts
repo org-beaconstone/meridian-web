@@ -102,6 +102,32 @@ test('validation and budget editing work', async ({ page }) => {
   );
 });
 
+test('identity slice withholds opening and leaves the balance unchanged', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+  await page.getByRole('button', { name: 'Account details' }).click();
+  await page.getByRole('button', { name: 'Identity slice' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Identity slice' })).toBeVisible();
+  await expect(dialog.getByText('Not release ready')).toBeVisible();
+  await expect(dialog.getByText('25 November 2026', { exact: false }).first()).toBeVisible();
+  await expect(dialog.getByText('26 November 2026')).toBeVisible();
+  await expect(dialog.getByText('1 December 2026')).toBeVisible();
+  await expect(dialog.getByText('Production claim withheld')).toBeVisible();
+  await expect(
+    dialog.getByText('Identity verification has not succeeded. The savings account stays closed.'),
+  ).toBeVisible();
+  await expect(dialog.getByText(/Release checks are still open/)).toBeVisible();
+  await expect(dialog.getByText('Funding stays in a later batch.')).toBeVisible();
+  await expect(dialog.getByText('Mobile dependency confirmed')).toBeVisible();
+  await expect(dialog.getByRole('listitem').filter({ hasText: 'Funding' })).toContainText(
+    'Later batch',
+  );
+  await page.getByRole('button', { name: 'Back to account' }).click();
+  await expect(page.getByRole('heading', { name: 'Your everyday account' })).toBeVisible();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+});
+
 test('corrupt or inaccessible storage recovers without blocking payments', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('meridian_bank_state', '{bad json'));
   await page.goto('/');

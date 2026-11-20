@@ -30,6 +30,10 @@ The same 10-test browser suite also passed against https://meridian-money.kaizen
 
 The project retains its inherited enforced `corp-edge` restriction. These tests ran from an allowed environment; they do not establish public internet availability. See [deployment notes](deployment.md).
 
+## Identity slice, 20 November 2026
+
+`npm run check` passed (140 unit tests). `TEST_PRODUCTION=1 npm run test:e2e` passed (13 tests). The new journey opens Account details, then Identity slice, and checks the withheld production claim, the 25 November / 26 November / 1 December dates, the closed savings account, and the unchanged £12,480.50 balance. Axe reported no WCAG AA violations on that dialog at 1440px and 390px. This record is a planning gate, not integration evidence.
+
 ## Known limits
 
 Provider outcomes are synchronous local simulations. No real API, auth, SCA or payment processing was tested. Browser storage is single-tab demo state, not a shared ledger. npm reports old React peer ranges in some transitive Atlaskit analytics packages; installed versions pass both tested modes. Vite warns that the main bundle exceeds 500 kB uncompressed; code splitting is a future production optimization, not a functional blocker. Manual Kaizen deployment is configured; GitHub CI is verification-only, not continuous deployment.

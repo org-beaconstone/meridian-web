@@ -2,6 +2,26 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 for (const width of [1440, 390])
+  test(`identity slice dialog at ${width}px has no detected WCAG AA violations`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Account details' }).click();
+    await page.getByRole('button', { name: 'Identity slice' }).click();
+    await expect(page.getByRole('heading', { name: 'Identity slice' })).toBeVisible();
+    const result = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(
+      result.violations.map((item) => ({
+        id: item.id,
+        nodes: item.nodes.map((node) => ({ target: node.target, failure: node.failureSummary })),
+      })),
+    ).toEqual([]);
+  });
+
+for (const width of [1440, 390])
   test(`core pages at ${width}px have no detected WCAG AA violations`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('/');
