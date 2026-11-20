@@ -37,3 +37,5 @@ Use [company strategy](company-strategy.md), [compliance policy](compliance-poli
 ## Limits
 
 This browser demo does not implement an API, authentication, SCA or actual provider SDKs. The fee is a simulated £0.00, not a quotation. Reload preserves this browser's state; tabs are not live-synchronized. Clear only the `meridian_bank_state` localStorage key if manual recovery is necessary, rather than clearing unrelated browser data.
+
+Account details includes the [identity slice](account-opening-identity-slice.md) for ABDAO-1. It records the identity-verification batch and leaves savings opening and funding closed. The dates shown there are planning dates, not a production claim.

@@ -1351,6 +1351,44 @@ strong {
   gap: 12px;
   margin-top: 25px;
 }
+.slice-block {
+  margin: 4px 0 18px;
+}
+.slice-block h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--brand-navy);
+}
+.slice-steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.slice-steps li + li {
+  margin-top: 6px;
+}
+.slice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.slice-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.slice-list li > span:first-child {
+  min-width: 0;
+}
+.slice-status {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
 .receipt-heading {
   text-align: center;
   display: flex;

@@ -31,3 +31,25 @@ export {
 
 export { STORAGE_KEY, loadState, saveState } from './storage';
 export type { LoadStateResult } from './storage';
+
+export {
+  IDENTITY_SLICE,
+  IDENTITY_SLICE_TEAM,
+  IDENTITY_SLICE_WORK_ITEM,
+  IDENTITY_WORKFLOW,
+  LATER_THREADS,
+  evaluateRelease,
+  formatSliceDate,
+  releaseHeadline,
+  requestSavingsOpening,
+  requestThread,
+  traceSummary,
+} from './identity-slice';
+export type {
+  IdentitySliceRecord,
+  ReleaseAssessment,
+  SliceCheck,
+  SliceDecision,
+  SliceObjective,
+  SliceRisk,
+} from './identity-slice';

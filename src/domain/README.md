@@ -3,6 +3,7 @@
 Fictional GBP simulation, with no network or real credentials.
 
 - `model.ts`: exported types, `RECIPIENTS`, `PROVIDERS`, fixed `DEMO_DATE`, validation, integer-pence parsing, provider routing and payment execution.
+- `identity-slice.ts`: ABDAO-1 delivery record for the identity-verification batch. It traces objectives to risks and decisions, and withholds a production claim, savings opening, and funding until release checks match the record.
 - `storage.ts`: strict Zod validation, versioned browser state and graceful recovery.
 - `index.ts`: public barrel exports. Import using relative paths; this project has no `@/` alias.
 

@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import IdentitySlice from './components/IdentitySlice';
 import {
   getProvider,
   money,
@@ -153,9 +154,9 @@ export default function App() {
   const [scenario, setScenario] = useState<Scenario>('success');
   const [receipt, setReceipt] = useState<Transaction | null>(null);
   const [lastPayment, setLastPayment] = useState<Transaction | null>(null);
-  const [dialog, setDialog] = useState<'controls' | 'account' | 'reset' | 'connection' | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    'controls' | 'account' | 'reset' | 'connection' | 'identity' | null
+  >(null);
   const [budgetEdit, setBudgetEdit] = useState<Budget | null>(null);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetError, setBudgetError] = useState('');
@@ -1079,7 +1080,15 @@ export default function App() {
               details into this demo.
             </p>
           </SectionMessage>
+          <div className="dialog-actions">
+            <Button appearance="primary" onClick={() => setDialog('identity')}>
+              Identity slice
+            </Button>
+          </div>
         </Dialog>
+      )}
+      {dialog === 'identity' && (
+        <IdentitySlice onClose={() => setDialog(null)} onBack={() => setDialog('account')} />
       )}
       {dialog === 'controls' && (
         <Dialog title="Rehearsal controls" onClose={() => setDialog(null)}>
