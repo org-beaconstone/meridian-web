@@ -12,6 +12,32 @@ export class ApiFailure extends Error {
 export type PaymentReply =
   | { ok: true; state: BankState; transaction: Transaction }
   | { ok: false; error: string; code: string; paymentId?: string };
+
+const REQUEST_TIMEOUT_MS = 15000;
+
+function isTimeoutError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const name = 'name' in error && typeof error.name === 'string' ? error.name : '';
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+  return name === 'TimeoutError' || /timeout/i.test(message);
+}
+
+function isPaymentPath(path: string): boolean {
+  return path === '/payments';
+}
+
+function timeoutMessage(path: string): string {
+  return isPaymentPath(path)
+    ? 'The payment request timed out. The outcome may be unknown. Retry the same payment, not a new one.'
+    : 'The request timed out before a response arrived. Try again.';
+}
+
+function connectionMessage(path: string): string {
+  return isPaymentPath(path)
+    ? 'API connection lost. The payment outcome may be unknown. Retry the same payment, not a new one.'
+    : 'API connection lost. Check connectivity and try again.';
+}
+
 export class ApiClient {
   constructor(
     private baseUrl: string,
@@ -35,17 +61,18 @@ export class ApiClient {
           ...extra,
         },
         body: body === undefined ? undefined : JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-    } catch {
-      throw new ApiFailure(
-        'API connection lost. The payment outcome may be unknown. Retry the same payment, not a new one.',
-      );
+    } catch (error) {
+      if (isTimeoutError(error)) throw new ApiFailure(timeoutMessage(path), 'TIMEOUT', 408);
+      throw new ApiFailure(connectionMessage(path), 'NETWORK_ERROR', 0);
     }
+    const timedOut = response.status === 408 || response.status === 504;
     let value: unknown;
     try {
       value = await response.json();
     } catch {
+      if (timedOut) throw new ApiFailure(timeoutMessage(path), 'TIMEOUT', response.status);
       throw new ApiFailure(
         'Invalid API response. Check connectivity before retrying.',
         'INVALID_RESPONSE',
@@ -55,12 +82,15 @@ export class ApiClient {
     if (!value || typeof value !== 'object')
       throw new ApiFailure('Invalid API response', 'INVALID_RESPONSE');
     const result = value as Record<string, unknown>;
-    if (!response.ok)
+    if (!response.ok) {
+      const serverError = typeof result.error === 'string' ? result.error : '';
+      const serverCode = typeof result.code === 'string' ? result.code : '';
       throw new ApiFailure(
-        typeof result.error === 'string' ? result.error : `API returned ${response.status}`,
-        typeof result.code === 'string' ? result.code : 'HTTP_ERROR',
+        serverError || (timedOut ? timeoutMessage(path) : `API returned ${response.status}`),
+        serverCode || (timedOut ? 'TIMEOUT' : 'HTTP_ERROR'),
         response.status,
       );
+    }
     return result;
   }
   async getState(): Promise<BankState> {

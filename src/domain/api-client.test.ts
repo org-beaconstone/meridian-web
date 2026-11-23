@@ -29,19 +29,17 @@ describe('connected API contract', () => {
   it('preserves pending outcome instead of fabricating receipt', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              ok: false,
-              code: 'PAYMENT_PENDING',
-              error: 'Pending',
-              paymentId: 'intent-1',
-            }),
-            { status: 202 },
-          ),
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            code: 'PAYMENT_PENDING',
+            error: 'Pending',
+            paymentId: 'intent-1',
+          }),
+          { status: 202 },
         ),
+      ),
     );
     expect(
       await new ApiClient('/api/v1', 'room-a').submitPayment(
@@ -84,6 +82,102 @@ describe('connected API contract', () => {
   });
   it('never fabricates local success on lost response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
-    await expect(new ApiClient('/api/v1', 'room-a').reset()).rejects.toBeInstanceOf(ApiFailure);
+    const failure = await new ApiClient('/api/v1', 'room-a').reset().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ApiFailure);
+    expect(failure).toMatchObject({
+      code: 'NETWORK_ERROR',
+      message: 'API connection lost. Check connectivity and try again.',
+    });
+  });
+  it('reports a timed-out read as a timeout, not a lost payment', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockRejectedValue(
+          new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+        ),
+    );
+    const failure = await new ApiClient('/api/v1', 'room-a').getState().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ApiFailure);
+    expect(failure).toMatchObject({
+      code: 'TIMEOUT',
+      status: 408,
+      message: 'The request timed out before a response arrived. Try again.',
+    });
+  });
+  it('keeps the same payment retry guidance when a payment times out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockRejectedValue(
+          new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+        ),
+    );
+    const failure = await new ApiClient('/api/v1', 'room-a')
+      .submitPayment('birch-bloom', 3500, 'card', '', 'success', 'same-key')
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+    expect(failure).toBeInstanceOf(ApiFailure);
+    expect(failure).toMatchObject({
+      code: 'TIMEOUT',
+      message:
+        'The payment request timed out. The outcome may be unknown. Retry the same payment, not a new one.',
+    });
+  });
+  it('reads a gateway timeout page as a timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('<html>504 Gateway Time-out</html>', {
+          status: 504,
+          headers: { 'Content-Type': 'text/html' },
+        }),
+      ),
+    );
+    const failure = await new ApiClient('/api/v1', 'room-a').getState().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ApiFailure);
+    expect(failure).toMatchObject({
+      code: 'TIMEOUT',
+      status: 504,
+      message: 'The request timed out before a response arrived. Try again.',
+    });
+  });
+  it('preserves a timeout message supplied by the service', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error: 'The service timed out before it could respond. Try again.',
+            code: 'TIMEOUT',
+          }),
+          { status: 504 },
+        ),
+      ),
+    );
+    const failure = await new ApiClient('/api/v1', 'room-a').reset().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ApiFailure);
+    expect(failure).toMatchObject({
+      status: 504,
+      code: 'TIMEOUT',
+      message: 'The service timed out before it could respond. Try again.',
+    });
   });
 });
