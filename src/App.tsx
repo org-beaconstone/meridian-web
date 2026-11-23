@@ -139,6 +139,7 @@ export default function App() {
     connectionMode,
     connectionStatus,
     connectionError,
+    connectionProblem,
     sessionId,
     submitPayment: apiSubmitPayment,
     updateBudget: apiUpdateBudget,
@@ -150,6 +151,7 @@ export default function App() {
   const [draft, setDraft] = useState<PaymentDraft>(blankDraft);
   const [step, setStep] = useState<'details' | 'review' | 'done'>('details');
   const [errors, setErrors] = useState<string[]>([]);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [scenario, setScenario] = useState<Scenario>('success');
   const [receipt, setReceipt] = useState<Transaction | null>(null);
   const [lastPayment, setLastPayment] = useState<Transaction | null>(null);
@@ -202,6 +204,7 @@ export default function App() {
     setDraft({ ...blankDraft(), recipientId: recipientId ?? RECIPIENTS[0].id });
     setStep('details');
     setErrors([]);
+    setErrorCode(null);
     setLastPayment(null);
     paymentId.current = crypto.randomUUID();
     confirming.current = false;
@@ -216,12 +219,15 @@ export default function App() {
     if (result.ok && result.transaction) {
       setLastPayment(result.transaction);
       setErrors([]);
+      setErrorCode(null);
       setStep('done');
     } else if (result.code === 'PAYMENT_PENDING') {
       setErrors([result.error || 'Payment pending']);
+      setErrorCode(result.code);
       confirming.current = false;
     } else {
       setErrors([result.error || 'Payment failed']);
+      setErrorCode(result.code || null);
       confirming.current = false;
     }
   }
@@ -237,6 +243,7 @@ export default function App() {
       setStep('details');
       setScenario('success');
       setErrors([]);
+      setErrorCode(null);
       setLastPayment(null);
       setQuery('');
       setFilter('all');
@@ -399,7 +406,9 @@ export default function App() {
                   ? 'Connected API'
                   : connectionStatus === 'connecting'
                     ? 'Connecting to API'
-                    : 'API unavailable'}
+                    : connectionProblem === 'timeout'
+                      ? 'Request timed out'
+                      : 'API unavailable'}
               </strong>
               <span>Room: {sessionId}</span>
               <Button appearance="subtle" onClick={() => setDialog('connection')}>
@@ -608,7 +617,13 @@ export default function App() {
                   <div role="alert" className="message">
                     <SectionMessage
                       appearance="error"
-                      title={step === 'review' ? 'Payment not completed' : 'Check your payment'}
+                      title={
+                        errorCode === 'TIMEOUT'
+                          ? 'Payment request timed out'
+                          : step === 'review'
+                            ? 'Payment not completed'
+                            : 'Check your payment'
+                      }
                     >
                       <p>
                         {errors.join('. ')}
@@ -625,6 +640,7 @@ export default function App() {
                       event.preventDefault();
                       const nextErrors = validatePayment(state, draft);
                       setErrors(nextErrors);
+                      setErrorCode(null);
                       if (!nextErrors.length) setStep('review');
                     }}
                     noValidate
@@ -786,6 +802,7 @@ export default function App() {
                         onClick={() => {
                           setStep('details');
                           setErrors([]);
+                          setErrorCode(null);
                         }}
                       >
                         Back to details
@@ -1122,7 +1139,8 @@ export default function App() {
                   />
                   {connectionStatus === 'connected' && 'Connected API'}
                   {connectionStatus === 'connecting' && 'Connecting...'}
-                  {connectionStatus === 'error' && 'Connection error'}
+                  {connectionStatus === 'error' &&
+                    (connectionProblem === 'timeout' ? 'Request timed out' : 'Connection error')}
                 </span>
               </Button>
             </>
@@ -1192,7 +1210,8 @@ export default function App() {
                 />
                 {connectionStatus === 'connected' && 'Connected API'}
                 {connectionStatus === 'connecting' && 'Connecting...'}
-                {connectionStatus === 'error' && 'Connection error'}
+                {connectionStatus === 'error' &&
+                  (connectionProblem === 'timeout' ? 'Request timed out' : 'Connection error')}
               </span>
             </div>
 
@@ -1235,6 +1254,7 @@ export default function App() {
                     setDraft(blankDraft());
                     setStep('details');
                     setErrors([]);
+                    setErrorCode(null);
                     setLastPayment(null);
                     setReceipt(null);
                     setBudgetEdit(null);
