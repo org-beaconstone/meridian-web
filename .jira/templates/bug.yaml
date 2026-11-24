@@ -1,0 +1,34 @@
+# Bug work-item template.
+# target-repo decisions:
+# - required: yes, recorded in the required list. Where stays optional, so the
+#   destination repository is no longer easy to omit.
+# - placement: its own field beside Where. Where still carries a Repo label
+#   with paths and is not reshaped.
+# - format: the repository name in plain text. The heading is the label, so
+#   the value does not repeat a Repo label.
+kind: work-item
+name: bug
+required:
+  - target-repo
+fields:
+  - name: why
+    heading: Why
+    guidance: Describe the defect and why it needs a fix.
+  - name: target-repo
+    heading: Target repo
+    guidance: Name the one repository the fix belongs to, as plain text with no Repo label. This field is required and stays beside Where.
+  - name: where
+    heading: Where
+    guidance: Optional. Keep a Repo label with the paths or surfaces involved. This does not replace Target repo.
+  - name: acceptance-criteria
+    heading: Acceptance criteria
+    guidance: List what must be true when the bug is fixed.
+  - name: verification
+    heading: Verification
+    guidance: State the commands or review that show the fix holds.
+  - name: out-of-scope
+    heading: Out of scope
+    guidance: List changes this bug must leave alone.
+  - name: open-questions
+    heading: Open questions
+    guidance: List questions still open. Remove a question once it is decided.
