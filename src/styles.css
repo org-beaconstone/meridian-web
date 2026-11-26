@@ -1637,6 +1637,19 @@ strong {
   .nav-dot {
     display: none;
   }
+  .nav-item svg {
+    display: none;
+  }
+  .nav-item {
+    min-width: 0;
+    padding: 12px 2px;
+    font-size: 11px;
+  }
+  .nav-item span {
+    min-width: 0;
+    text-align: center;
+    line-height: 1.15;
+  }
   .workspace-label,
   .sidebar-bottom {
     display: none;
@@ -1898,6 +1911,54 @@ strong {
 }
 .merchant-avatar {
   color: color-mix(in srgb, var(--merchant-color, #839478) 45%, #172720);
+}
+.journey {
+  list-style: none;
+  margin: 16px 0 22px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.journey li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.journey li.current {
+  border-color: var(--brand-navy);
+}
+.journey li small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.journey-state {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.onboarding-panel h2 + p,
+.onboarding-lead {
+  margin-top: 8px;
+  max-width: 68ch;
+}
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.onboarding-funding {
+  margin-top: 8px;
+}
+.onboarding-funding .field-label {
+  display: block;
+  margin-top: 12px;
 }
 @media (prefers-reduced-motion: reduce) {
   *,
