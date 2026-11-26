@@ -4,6 +4,7 @@ Fictional GBP simulation, with no network or real credentials.
 
 - `model.ts`: exported types, `RECIPIENTS`, `PROVIDERS`, fixed `DEMO_DATE`, validation, integer-pence parsing, provider routing and payment execution.
 - `storage.ts`: strict Zod validation, versioned browser state and graceful recovery.
+- `identity-adapter.ts`: onboarding identity outcomes, recoverable pause, resume and the activation gate.
 - `index.ts`: public barrel exports. Import using relative paths; this project has no `@/` alias.
 
 `parseAmount(string)` returns `[pence | null, error | null]`. It rejects zero, signs, exponent notation, more than two decimals and amounts over £10,000. `validatePayment(state, draft)` also checks the recipient, method, available balance and note length.
@@ -13,5 +14,7 @@ Fictional GBP simulation, with no network or real credentials.
 `monthlySpent` sums completed transactions for the fixed demo month. `updateBudget` accepts a positive limit up to £10,000. `money` formats integer pence as GBP. The initial state has £12,480.50 balance, £1,842.80 spent and £3,200 total category limits.
 
 `loadState()` always returns `{ state, warning }`; corrupt data resets to fresh fixtures with a warning. `saveState(state)` returns false for invalid data, denied storage or quota exhaustion. Schemas require safe integer amounts, valid calendar dates, known recipients, matching provider/method pairs, unique transaction IDs and exactly five positive budgets. Unexpected fields are rejected.
+
+`applyIdentityResult` and `runIdentityCheck` treat verified, explicit rejection, and timeout/unavailable as different outcomes. A timeout or an unavailable identity provider pauses the journey, saves the progress already completed, and can resume later at the same scope on journey step 4. Pending, unavailable and rejected identities cannot activate the account or apply opening funds. Opening funds are integer minor units and are recorded only after a verified identity. Diagnostics keep an allowlisted set of fields; identity attributes, provider payloads, personal and account data, tokens and secrets are dropped. `createSimulatedIdentityProvider` is a local simulation, not a payment provider.
 
 Unit tests live next to the code, including boundary regressions in `edge-cases.test.ts`. Run `npm test` for the current test count.
