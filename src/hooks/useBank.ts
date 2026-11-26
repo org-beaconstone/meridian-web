@@ -29,6 +29,7 @@ export function useBank() {
     connectionMode === 'standalone' ? 'connected' : 'connecting',
   );
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionProblem, setConnectionProblem] = useState<'timeout' | 'offline' | null>(null);
   const [busy, setBusy] = useState(false);
   const client = useRef<ApiClient | null>(null);
   const epoch = useRef(0);
@@ -53,6 +54,7 @@ export function useBank() {
       timer: ReturnType<typeof setTimeout>;
     setConnectionStatus('connecting');
     setConnectionError(null);
+    setConnectionProblem(null);
     async function poll() {
       const started = revision.current;
       try {
@@ -67,12 +69,15 @@ export function useBank() {
             apply(next);
             setConnectionStatus('connected');
             setConnectionError(null);
+            setConnectionProblem(null);
           }
         }
       } catch (error) {
         if (!disposed && epoch.current === generation && started === revision.current) {
+          const timedOut = error instanceof ApiFailure && error.code === 'TIMEOUT';
           setConnectionStatus('error');
           setConnectionError(error instanceof Error ? error.message : 'API unavailable');
+          setConnectionProblem(timedOut ? 'timeout' : 'offline');
         }
       } finally {
         if (!disposed) timer = setTimeout(poll, 2000);
@@ -101,6 +106,7 @@ export function useBank() {
       if (error instanceof ApiFailure && error.status === 0) {
         setConnectionStatus('error');
         setConnectionError(error.message);
+        setConnectionProblem('offline');
       }
       throw error;
     } finally {
@@ -181,6 +187,7 @@ export function useBank() {
     revision.current++;
     setConnectionStatus('connecting');
     setConnectionError(null);
+    setConnectionProblem(null);
     setSessionId(next);
   }
   return {
@@ -190,6 +197,7 @@ export function useBank() {
     connectionMode,
     connectionStatus,
     connectionError,
+    connectionProblem,
     sessionId,
     submitPayment,
     updateBudget,
