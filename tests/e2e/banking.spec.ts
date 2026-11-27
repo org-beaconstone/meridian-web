@@ -102,6 +102,57 @@ test('validation and budget editing work', async ({ page }) => {
   );
 });
 
+test('security sign-off schedules implementation and notifies both audiences', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Onboarding', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Security sign-off, then scheduling.' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Record security sign-off' }).click();
+  await expect(page.getByRole('alert')).toContainText('Complete checklist item');
+
+  const checklist = [
+    'In-scope SOC 2 Type II report recorded',
+    'PCI scope confirmed with no raw PAN in Meridian',
+    'Data residency accepted for the customer markets',
+    'Incident notification path documented',
+    'PSD2 and SCA capability confirmed',
+    'No unresolved regulatory action',
+  ];
+  for (const label of checklist) {
+    await page.getByRole('checkbox', { name: label, exact: true }).check();
+  }
+  await page.getByRole('button', { name: 'Record security sign-off' }).click();
+  const scheduled = page.getByRole('region', { name: 'Implementation schedule' });
+  await expect(scheduled).toContainText(
+    'Priya Shah (implementation contact) was notified automatically at 18 Sep 2026, 16:30 UTC',
+  );
+  await expect(scheduled).toContainText(
+    'Product Operations was notified automatically at 18 Sep 2026, 16:30 UTC',
+  );
+  await expect(scheduled.getByText('21 Sep 2026', { exact: true })).toBeVisible();
+  await expect(scheduled.getByText('22 Sep 2026', { exact: true })).toBeVisible();
+  await expect(scheduled.getByText('23 Sep 2026', { exact: true })).toBeVisible();
+  await expect(scheduled.getByText('25 Sep 2026', { exact: true })).toBeVisible();
+  await expect(scheduled.getByText('Automated', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Rehearse handoff again' }).click();
+  await expect(page.getByRole('checkbox', { name: checklist[0], exact: true })).not.toBeChecked();
+  await page.getByLabel('Notify channel').selectOption('fallback');
+  for (const label of checklist) {
+    await page.getByRole('checkbox', { name: label, exact: true }).check();
+  }
+  await page.getByRole('button', { name: 'Record security sign-off' }).click();
+  await expect(scheduled).toContainText('queued for manual notice by 21 Sep 2026, 12:30 UTC');
+  await expect(scheduled).toContainText(
+    'Product Operations acknowledges the schedule by manual notice due 21 Sep 2026, 17:00 UTC',
+  );
+  await expect(scheduled.getByText('Operational fallback', { exact: true })).toBeVisible();
+  await expect(scheduled).toContainText('MER-1-HANDOFF-FB');
+  await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+});
+
 test('corrupt or inaccessible storage recovers without blocking payments', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('meridian_bank_state', '{bad json'));
   await page.goto('/');

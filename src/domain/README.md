@@ -15,3 +15,5 @@ Fictional GBP simulation, with no network or real credentials.
 `loadState()` always returns `{ state, warning }`; corrupt data resets to fresh fixtures with a warning. `saveState(state)` returns false for invalid data, denied storage or quota exhaustion. Schemas require safe integer amounts, valid calendar dates, known recipients, matching provider/method pairs, unique transaction IDs and exactly five positive budgets. Unexpected fields are rejected.
 
 Unit tests live next to the code, including boundary regressions in `edge-cases.test.ts`. Run `npm test` for the current test count.
+
+`onboarding.ts` is the MER-1 step 3 to step 4/5 handoff. `approveSecurityChecklist` is the trigger: a complete security checklist and a Trust & Safety sign-off open implementation scheduling and record notices for the implementation contact and Product Operations. When the notify channel is unavailable, the same trigger opens the schedule and applies fallback policy `MER-1-HANDOFF-FB`. The function leaves its input unchanged, sends nothing outside the demo, and does not move money. See [the handoff note](../../docs/onboarding-handoff.md).
