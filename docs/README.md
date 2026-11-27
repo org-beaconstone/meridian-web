@@ -6,6 +6,7 @@ The existing [Confluence and Google documents](https://github.com/org-beaconston
 - [Company strategy](company-strategy.md): source summary with FY25 volume baseline.
 - [Provider expansion](provider-expansion-playbook.md): canonical scorecard and rollout gates.
 - [Compliance policy](compliance-policy.md): fictional procurement gates and actual implementation boundaries.
+- [Onboarding handoff](onboarding-handoff.md): MER-1 security sign-off trigger, notices, and the approved scheduling fallback.
 - [API standards](api-standards.md): target policy versus implemented Java rehearsal controls.
 - [Brand / ADS](brand-design-system.md): navy/gold identity, existing components and accessibility.
 - [Standalone rehearsal](demo-runbook.md), [connected mode](../INTEGRATION.md), [Kaizen hosting](deployment.md).

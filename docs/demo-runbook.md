@@ -28,6 +28,10 @@ For the hosted rehearsal, open https://meridian-money.kaizen.shared.atlassian-3p
 - A reset has a second confirmation; cancellation preserves changes.
 - Escape closes receipts and returns focus to the trigger.
 
+## Onboarding handoff
+
+Open **Onboarding**. The fictional case is Harbour & Pine Markets, plan MER-1 v2.1, still in legal and security review. Recording sign-off before the checklist is complete is rejected. Mark every checklist item, leave the notify channel on **Automated on sign-off**, and record sign-off as Rowan Hale. Implementation scheduling opens for 21–25 September 2026, and Priya Shah plus Product Operations show as notified at the rehearsal clock, 18 September 2026, 16:30 UTC. Rehearse again, choose **Unavailable, operational fallback**, and sign off once more. The schedule still opens. The notices move to the approved `MER-1-HANDOFF-FB` queue: Priya Shah by 21 September 2026, 12:30 UTC, and Product Operations by 17:00 UTC the same day. This screen does not send those notices out of the browser.
+
 ## Planner handoff
 
 There are exactly two providers. A new European payment experience is intentionally absent, including hidden code or a pre-selected vendor. Frame the next task around evaluating local payment coverage, choosing a suitable provider against [the playbook](provider-expansion-playbook.md), and changing this payment screen.

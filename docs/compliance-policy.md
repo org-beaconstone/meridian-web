@@ -6,4 +6,4 @@ The source's hard no-go gates include an in-scope SOC2 TypeII report, PCI-DSS Le
 
 The running clients collect no financial credentials. The Java backend stores synthetic state only. There is no production authentication, SCA, KYC/AML enforcement, encryption/retention program or compliance attestation. Room IDs isolate demo data but are not access credentials. Never enter real customer information.
 
-See [strategy](company-strategy.md), [playbook](provider-expansion-playbook.md) and [API standards](api-standards.md).
+See [strategy](company-strategy.md), [playbook](provider-expansion-playbook.md), [API standards](api-standards.md) and the [onboarding handoff](onboarding-handoff.md) from security review into implementation scheduling.

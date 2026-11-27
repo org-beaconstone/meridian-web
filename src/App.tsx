@@ -26,6 +26,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import Dialog from './components/Dialog';
+import { OnboardingHandoff } from './components/OnboardingHandoff';
 import {
   getProvider,
   money,
@@ -41,7 +42,7 @@ import {
 } from './domain/model';
 import { useBank } from './hooks/useBank';
 
-type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Connection';
+type Page = 'Overview' | 'Payments' | 'Budgets' | 'Activity' | 'Onboarding' | 'Connection';
 const categoryColor: Record<Category, string> = {
   Shopping: '#697D6B',
   'Food & drink': '#B98650',
@@ -54,7 +55,48 @@ const nav = [
   { name: 'Payments', icon: ArrowUpRight },
   { name: 'Budgets', icon: PieChart },
   { name: 'Activity', icon: ReceiptText },
+  { name: 'Onboarding', icon: ShieldCheck },
 ] as const;
+const pageCopy: Record<Page, { section: string; eyebrow: string; title: string; summary: string }> =
+  {
+    Overview: {
+      section: 'Personal banking',
+      eyebrow: 'FRIDAY, 18 SEPTEMBER 2026',
+      title: 'Your everyday, balanced.',
+      summary: 'Good evening, Alex. Here’s where you stand today.',
+    },
+    Payments: {
+      section: 'Personal banking',
+      eyebrow: 'YOUR MONEY. YOUR WAY.',
+      title: 'A little closer. One payment away.',
+      summary: 'Pay with confidence. Keep your plans in view.',
+    },
+    Budgets: {
+      section: 'Personal banking',
+      eyebrow: 'YOUR MONEY. YOUR WAY.',
+      title: 'A plan for what matters.',
+      summary: 'Small intentions today. More possibilities tomorrow.',
+    },
+    Activity: {
+      section: 'Personal banking',
+      eyebrow: 'YOUR MONEY. YOUR WAY.',
+      title: 'The story of your spending.',
+      summary: 'Every payment, in one clear picture.',
+    },
+    Onboarding: {
+      section: 'Payments platform',
+      eyebrow: 'MER-1 · CUSTOMER ONBOARDING PLAN v2.1',
+      title: 'Security sign-off, then scheduling.',
+      summary:
+        'Trust & Safety sign-off opens implementation scheduling and notifies the implementation contact and Product Operations.',
+    },
+    Connection: {
+      section: 'Personal banking',
+      eyebrow: 'YOUR MONEY. YOUR WAY.',
+      title: 'Your everyday, balanced.',
+      summary: 'Good evening, Alex. Here’s where you stand today.',
+    },
+  };
 const dateLabel = (date: string) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -366,7 +408,8 @@ export default function App() {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            Personal banking <ChevronRight size={14} aria-hidden="true" /> <strong>{page}</strong>
+            {pageCopy[page].section} <ChevronRight size={14} aria-hidden="true" />{' '}
+            <strong>{page}</strong>
           </div>
           <div className="topbar-right">
             <span className="demo-badge">
@@ -413,29 +456,13 @@ export default function App() {
           </div>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">
-                {page === 'Overview' ? 'FRIDAY, 18 SEPTEMBER 2026' : 'YOUR MONEY. YOUR WAY.'}
-              </div>
+              <div className="eyebrow">{pageCopy[page].eyebrow}</div>
               <h1 ref={heading} tabIndex={-1}>
-                {page === 'Overview'
-                  ? 'Your everyday, balanced.'
-                  : page === 'Payments'
-                    ? 'A little closer. One payment away.'
-                    : page === 'Budgets'
-                      ? 'A plan for what matters.'
-                      : 'The story of your spending.'}
+                {pageCopy[page].title}
               </h1>
-              <p>
-                {page === 'Overview'
-                  ? 'Good evening, Alex. Here’s where you stand today.'
-                  : page === 'Payments'
-                    ? 'Pay with confidence. Keep your plans in view.'
-                    : page === 'Budgets'
-                      ? 'Small intentions today. More possibilities tomorrow.'
-                      : 'Every payment, in one clear picture.'}
-              </p>
+              <p>{pageCopy[page].summary}</p>
             </div>
-            {page !== 'Payments' && (
+            {page !== 'Payments' && page !== 'Onboarding' && (
               <Button appearance="primary" onClick={() => startPayment()}>
                 <span className="button-with-icon">
                   <Plus size={17} />
@@ -910,6 +937,8 @@ export default function App() {
               </div>
             </>
           )}
+
+          {page === 'Onboarding' && <OnboardingHandoff />}
 
           {page === 'Activity' && (
             <section className="panel activity-panel">
