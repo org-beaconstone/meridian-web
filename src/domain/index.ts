@@ -31,3 +31,17 @@ export {
 
 export { STORAGE_KEY, loadState, saveState } from './storage';
 export type { LoadStateResult } from './storage';
+
+export {
+  EXPLICIT_REJECTION_APPLICANT_MESSAGE,
+  IDENTITY_VERIFICATION_RESULTS,
+  PAUSED_APPLICANT_MESSAGE,
+  VERIFIED_APPLICANT_MESSAGE,
+  isIdentityVerificationResult,
+  selectApplicantIdentityMessage,
+} from './identity-messaging';
+export type {
+  ApplicantIdentityMessage,
+  ApplicantIdentityOutcome,
+  IdentityVerificationResult,
+} from './identity-messaging';
