@@ -132,6 +132,135 @@ test('denied storage keeps app interactive', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
 });
 
+test('amount ceiling rejects £10,000.01 and a maximum payment debits once', async ({ page }) => {
+  await page.goto('/');
+  await startPayment(page, '10000.01');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByRole('alert')).toContainText('cannot exceed £10,000');
+  await expect(page.locator('.aside-balance')).toHaveText('£12,480.50');
+  await page.getByLabel('Amount (GBP)').fill('10000.00');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByText('Sending to Northline Studio')).toBeVisible();
+  await expect(page.getByText('Adyen (simulated)', { exact: true })).toBeVisible();
+  await expect(page.locator('.detail-list')).toContainText('£0.00');
+  await expect(page.locator('.detail-list')).toContainText('£2,480.50');
+  await page.getByRole('button', { name: 'Back to details' }).click();
+  await expect(page.locator('.aside-balance')).toHaveText('£12,480.50');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await page.getByRole('button', { name: 'Confirm £10,000.00 payment' }).click();
+  await expect(page.getByRole('heading', { name: 'A little thing, taken care of.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£2,480.50');
+  await expect(page.getByText('£11,842.80')).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('balance')).toHaveText('£2,480.50');
+  await page.getByRole('button', { name: 'Budgets', exact: true }).click();
+  await expect(page.getByRole('progressbar', { name: 'Shopping budget used' })).toHaveAttribute(
+    'aria-valuetext',
+    /£10,605.00 spent of £1,000.00/,
+  );
+});
+
+test('quick recipient payment lands in the matching activity category', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .locator('.quick-pay')
+    .getByRole('button', { name: /Maya Chen/ })
+    .click();
+  await expect(page.getByLabel('Recipient')).toHaveValue('maya-chen');
+  await page.getByLabel('Amount (GBP)').fill('20.00');
+  await page.getByLabel('Reference (optional)').fill('Evening class');
+  await expect(page.getByText('Lifestyle this month')).toBeVisible();
+  await expect(page.locator('.payment-impact strong')).toHaveText('£170.00');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByText('Sending to Maya Chen')).toBeVisible();
+  await expect(page.getByText('Adyen (simulated)', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm £20.00 payment' }).click();
+  await expect(page.locator('.payment-impact')).toContainText('including this payment');
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,460.50');
+  await page.getByRole('button', { name: 'Activity', exact: true }).click();
+  await page.getByLabel('Category').selectOption('Lifestyle');
+  await expect(page.getByText('2 payments in view')).toBeVisible();
+  await expect(page.locator('.transaction-row')).toHaveCount(2);
+  await page.getByLabel('Search payments').fill('Evening class');
+  await expect(page.locator('.transaction-row')).toHaveCount(1);
+  await page.getByLabel('Category').selectOption('Bills');
+  await expect(page.getByRole('heading', { name: 'No matching payments' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.locator('.transaction-row')).toHaveCount(9);
+  await page.getByLabel('Category').selectOption('Bills');
+  await expect(page.locator('.transaction-row')).toHaveCount(1);
+  await expect(page.locator('.transaction-row')).toContainText('Octavia Energy');
+});
+
+test('account details stay masked and return focus', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Account details' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Your everyday account' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Demo account •• 2048');
+  await expect(dialog).toContainText('Demo Visa •••• 4829');
+  await expect(dialog).toContainText('Never enter real financial details');
+  await expect(dialog.getByRole('textbox')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Account details' })).toBeFocused();
+  await expect(page.getByTestId('balance')).toHaveText('£12,480.50');
+});
+
+test('invalid budget edits are rejected and a valid limit persists', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Budgets', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit Transport budget' }).click();
+  await page.getByLabel('Monthly limit (GBP)').fill('0');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByRole('alert')).toContainText('Invalid amount');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByLabel('Monthly limit (GBP)').fill('10000.01');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByRole('alert')).toContainText('Invalid amount');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('progressbar', { name: 'Transport budget used' })).toHaveAttribute(
+    'aria-valuetext',
+    /£500.00/,
+  );
+  await page.getByRole('button', { name: 'Edit Transport budget' }).click();
+  await page.getByLabel('Monthly limit (GBP)').fill('200.00');
+  await page.getByRole('button', { name: 'Save budget' }).click();
+  await expect(page.getByRole('status')).toContainText('Transport budget updated');
+  await page.reload();
+  await page.getByRole('button', { name: 'Budgets', exact: true }).click();
+  await expect(page.getByRole('progressbar', { name: 'Transport budget used' })).toHaveAttribute(
+    'aria-valuetext',
+    /£210.00 spent of £200.00/,
+  );
+  await expect(page.getByText('£10.00 over budget')).toBeVisible();
+});
+
+test('a second payment debits again and an empty reference is explicit', async ({ page }) => {
+  await page.goto('/');
+  await startPayment(page, '10.00');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await expect(page.getByText('No reference', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm £10.00 payment' }).click();
+  await page.getByRole('button', { name: 'View receipt' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('dialog').locator('dt', { hasText: /^Note$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Make another payment' }).click();
+  await expect(page.getByLabel('Amount (GBP)')).toHaveValue('');
+  await page.getByLabel('Amount (GBP)').fill('5.50');
+  await page.getByRole('button', { name: 'Review payment' }).click();
+  await page.getByRole('button', { name: 'Confirm £5.50 payment' }).click();
+  await page.getByRole('button', { name: 'Back to overview' }).click();
+  await expect(page.getByTestId('balance')).toHaveText('£12,465.00');
+  await page.reload();
+  await expect(page.getByTestId('balance')).toHaveText('£12,465.00');
+  await page.getByRole('button', { name: 'Activity', exact: true }).click();
+  await expect(page.locator('.transaction-row')).toHaveCount(10);
+});
+
 test('mobile layout, keyboard dialog and empty search', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
